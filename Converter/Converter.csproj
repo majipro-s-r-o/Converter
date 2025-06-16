@@ -5,6 +5,7 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageProjectUrl>https://github.com/majipro-s-r-o/Converter</PackageProjectUrl>
         <RepositoryUrl>https://github.com/majipro-s-r-o/Converter</RepositoryUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageId>$(ProjectNamePrefix).$(MSBuildProjectName.Replace(" ", "_"))</PackageId>
     </PropertyGroup>
 
