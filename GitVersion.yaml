@@ -1,0 +1,6 @@
+mode: ContinuousDelivery
+
+branches:
+  main:
+    increment: Patch
+    is-release-branch: true
