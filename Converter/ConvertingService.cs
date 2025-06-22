@@ -13,14 +13,7 @@ internal sealed class ConvertingService : IConvertingService
 	{
 		_serviceProvider = serviceProvider;
 	}
-
-	/// <summary>
-	/// Converts from <see cref="TFrom"/> to <see cref="TTo"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
+	
 	public TTo Convert<TFrom, TTo>(TFrom from)
 	{
 		var service = GetConverter<TFrom, TTo>();
@@ -28,14 +21,6 @@ internal sealed class ConvertingService : IConvertingService
 		return service.Convert(from);
 	}
 	
-	/// <summary>
-	/// Converts from <see cref="ISet{T}"/> to <see cref="ISet{TTo}"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <param name="nullFallback">Delegate that defines behavior if the <see cref="from"/> is null.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
 	public ISet<TTo> Convert<TFrom, TTo>(ISet<TFrom> from, Func<ISet<TTo>> nullFallback)
 	{
 		if (nullFallback == null)
@@ -53,26 +38,11 @@ internal sealed class ConvertingService : IConvertingService
 		return from.Select(service.Convert).ToHashSet();
 	}
 	
-	/// <summary>
-	/// Converts from <see cref="ISet{TFrom}"/> to <see cref="ISet{TTo}"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
 	public ISet<TTo> Convert<TFrom, TTo>(ISet<TFrom> from)
 	{
 		return Convert<TFrom, TTo>(from, () => null);
 	}
 	
-	/// <summary>
-	/// Converts from <see cref="IList{TFrom}"/> to <see cref="IList{TTo}"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <param name="nullFallback">Delegate that defines behavior if the <see cref="from"/> is null.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
 	public IList<TTo> Convert<TFrom, TTo>(IList<TFrom> from, Func<IList<TTo>> nullFallback)
 	{
 		if (nullFallback == null)
@@ -90,26 +60,11 @@ internal sealed class ConvertingService : IConvertingService
 		return from.Select(service.Convert).ToList();
 	}
 	
-	/// <summary>
-	/// Converts from <see cref="IList{TFrom}"/> to <see cref="IList{TTo}"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
 	public IList<TTo> Convert<TFrom, TTo>(IList<TFrom> from)
 	{
 		return Convert<TFrom, TTo>(from, () => null);
 	}
 	
-	/// <summary>
-	/// Converts from <see cref="IEnumerable{TFrom}"/> to <see cref="IEnumerable{TTo}"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <param name="nullFallback">Delegate that defines behavior if the <see cref="from"/> is null.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
 	public IEnumerable<TTo> Convert<TFrom, TTo>(IEnumerable<TFrom> from, Func<IEnumerable<TTo>> nullFallback)
 	{
 		if (nullFallback == null)
@@ -127,26 +82,34 @@ internal sealed class ConvertingService : IConvertingService
 		return from.Select(service.Convert);
 	}
 	
-	/// <summary>
-	/// Converts from <see cref="IEnumerable{TFrom}"/> to <see cref="IEnumerable{TTo}"/> using <see cref="IConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
 	public IEnumerable<TTo> Convert<TFrom, TTo>(IEnumerable<TFrom> from)
 	{
 		return Convert<TFrom, TTo>(from, () => null);       
 	}
+	
+	public IDictionary<TToKey, TToValue> Convert<TFromKey, TFromValue, TToKey, TToValue>(IDictionary<TFromKey, TFromValue> from, Func<IDictionary<TToKey, TToValue>> nullFallback)
+	{
+		if (nullFallback == null)
+		{
+			throw new ArgumentNullException(nameof(nullFallback));
+		}
+	        
+		if (from == null)
+		{
+			return nullFallback();
+		}
 
-	/// <summary>
-	/// Converts from <see cref="TFrom"/> to <see cref="TTo"/> using <see cref="IReferenceConverter{TFrom, TTo}"/> implementation.
-	/// </summary>
-	/// <param name="from">Source of conversion.</param>
-	/// <param name="to">Target instance.</param>
-	/// <typeparam name="TFrom">Source type.</typeparam>
-	/// <typeparam name="TTo">Target type.</typeparam>
-	/// <returns>Result of conversion.</returns>
+		var convertKey = GetConversionFunction<TFromKey, TToKey>();
+		var convertValue = GetConversionFunction<TFromValue, TToValue>();
+		
+		return from.ToDictionary(kvp => convertKey(kvp.Key), kvp => convertValue(kvp.Value));
+	}
+	
+	public IDictionary<TToKey, TToValue> Convert<TFromKey, TFromValue, TToKey, TToValue>(IDictionary<TFromKey, TFromValue> from)
+	{
+		return Convert<TFromKey, TFromValue, TToKey, TToValue>(from, () => null);
+	}
+	
 	public TTo Convert<TFrom, TTo>(TFrom from, TTo to)
 	{
 		var service = _serviceProvider.GetRequiredService<IReferenceConverter<TFrom, TTo>>();
@@ -171,5 +134,12 @@ internal sealed class ConvertingService : IConvertingService
 		}
             
 		return service;
+	}
+
+	private Func<TFrom, TTo> GetConversionFunction<TFrom, TTo>()
+	{
+		return typeof(TFrom) == typeof(TTo)
+			? key => (TTo)(object)key
+			: GetConverter<TFrom, TTo>().Convert;
 	}
 }

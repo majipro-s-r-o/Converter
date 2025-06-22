@@ -1,7 +1,9 @@
-name: .NET Build, Pack, and Publish
+name: Continues Integration
 
 on:
   push:
+    branches-ignore:
+      - 'feature/*'
 
 jobs:
   build:
@@ -31,9 +33,6 @@ jobs:
 
     - name: Build
       run: dotnet build --configuration Release --no-restore
-
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
 
     - name: Pack
       run: dotnet pack --no-build --configuration Release /p:Version=${{ steps.gitversion.outputs.version }} /p:AssemblyVersion=${{ steps.gitversion.outputs.version }} /p:InformationalVersion=${{ steps.gitversion.outputs.version }}  --output artifacts

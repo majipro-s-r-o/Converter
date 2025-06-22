@@ -1,16 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <LangVersion>12.0</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageProjectUrl>https://github.com/majipro-s-r-o/Converter</PackageProjectUrl>
         <RepositoryUrl>https://github.com/majipro-s-r-o/Converter</RepositoryUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageId>$(ProjectNamePrefix).$(MSBuildProjectName.Replace(" ", "_"))</PackageId>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[9.0.0,)" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[5.0.0,)" />
+      <PackageReference Include="Microsoft.SourceLink.GitHub" Version="[8.0.0,)" PrivateAssets="All"/>
     </ItemGroup>
 
     <ItemGroup>
