@@ -10,6 +10,7 @@ public sealed class StringToFloatConverterTests : ConversionTestBase
     [DataRow("123.45", NumberStyles.AllowDecimalPoint, "en-US", 123.45f)]
     [DataRow("123,45", NumberStyles.AllowDecimalPoint, "cs-CZ", 123.45f)]
     [DataRow("$ 123,456.78", NumberStyles.Currency, "en-US", 123456.78f)]
+    [DataRow("invalid", NumberStyles.AllowDecimalPoint, "en-US", 0)]
     public async Task WhenInputIsCanBeFloatThenReturnFloatOtherwiseDefault(string source, NumberStyles numberStyles, string culture, float expected)
     {
         // Arrange

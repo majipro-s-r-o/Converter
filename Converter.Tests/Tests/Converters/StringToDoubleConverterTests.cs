@@ -10,6 +10,7 @@ public class StringToDoubleConverterTests : ConversionTestBase
     [DataRow("123.45", NumberStyles.AllowDecimalPoint, "en-US", 123.45)]
     [DataRow("123,45", NumberStyles.AllowDecimalPoint, "cs-CZ", 123.45)]
     [DataRow("$ 123,456.78", NumberStyles.Currency, "en-US", 123456.78)]
+    [DataRow("invalid", NumberStyles.AllowDecimalPoint, "en-US", 0)]
     public async Task WhenInputIsCanBeDoubleThenReturnDoubleOtherwiseDefault(string source, NumberStyles numberStyles, string culture, double expected)
     {
         // Arrange
