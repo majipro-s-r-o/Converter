@@ -26,7 +26,7 @@ jobs:
 
     - name: Use GitVersion
       id: gitversion
-      run: echo "version=$(dotnet gitversion /output json /showvariable FullSemVer)" >> $GITHUB_OUTPUT
+      run: echo "version=$(dotnet gitversion /output json /showvariable MajorMinorPatch)" >> $GITHUB_OUTPUT
 
     - name: Restore dependencies
       run: dotnet restore
