@@ -20,7 +20,7 @@ public static class DiCompositor
     {
         return serviceCollection.AddConverting(typeof(T).Assembly);
     }
-    
+
     /// <summary>
     /// Registers <see cref="Majipro.Converter.IConverter{TInput,TOutput}"/> for assembly where <see cref="T"/> belongs.
     /// </summary>
@@ -28,7 +28,8 @@ public static class DiCompositor
     /// <param name="configureOptions">The <see cref="Action{ConverterOptions}"/> that allows to configure converters.</param>
     /// <typeparam name="T">Reference <see cref="T"/>.</typeparam>
     /// <returns>The <see cref="IServiceCollection"/>.</returns>
-    public static IServiceCollection AddConverting<T>(this IServiceCollection serviceCollection, Action<ConverterOptions> configureOptions)
+    public static IServiceCollection AddConverting<T>(this IServiceCollection serviceCollection,
+        Action<ConverterOptions> configureOptions)
     {
         return serviceCollection.AddConverting(configureOptions, typeof(T).Assembly);
     }
@@ -39,13 +40,14 @@ public static class DiCompositor
     /// <param name="serviceCollection">The <see cref="IServiceCollection"/>.</param>
     /// <param name="assemblies">Array of <see cref="Assembly"/> that will be scanned for <see cref="Majipro.Converter.IConverter{TInput,TOutput}"/>.</param>
     /// <returns>The <see cref="IServiceCollection"/>.</returns>
-    public static IServiceCollection AddConverting(this IServiceCollection serviceCollection, params Assembly[] assemblies)
+    public static IServiceCollection AddConverting(this IServiceCollection serviceCollection,
+        params Assembly[] assemblies)
     {
         var options = new ConverterOptions();
-        
+
         return serviceCollection.AddConverting(options, assemblies);
     }
-    
+
     /// <summary>
     /// Registers <see cref="Majipro.Converter.IConverter{TInput,TOutput}"/> for assemblies from <see cref="assemblies"/>.
     /// </summary>
@@ -53,7 +55,8 @@ public static class DiCompositor
     /// <param name="configureOptions">The <see cref="Action{ConverterOptions}"/> that allows to configure converters.</param>
     /// <param name="assemblies">Array of <see cref="Assembly"/> that will be scanned for <see cref="Majipro.Converter.IConverter{TInput,TOutput}"/>.</param>
     /// <returns>The <see cref="IServiceCollection"/>.</returns>
-    public static IServiceCollection AddConverting(this IServiceCollection serviceCollection, Action<ConverterOptions> configureOptions, params Assembly[] assemblies)
+    public static IServiceCollection AddConverting(this IServiceCollection serviceCollection,
+        Action<ConverterOptions> configureOptions, params Assembly[] assemblies)
     {
         var options = new ConverterOptions();
 
@@ -64,30 +67,41 @@ public static class DiCompositor
 
         return serviceCollection.AddConverting(options, assemblies);
     }
-    
-    private static IServiceCollection AddConverting(this IServiceCollection serviceCollection, ConverterOptions options, params Assembly[] assemblies)
+
+    private static IServiceCollection AddConverting(this IServiceCollection serviceCollection, ConverterOptions options,
+        params Assembly[] assemblies)
     {
         if (serviceCollection == null)
         {
             throw new ArgumentNullException(nameof(serviceCollection));
         }
-        
+
         if (options == null)
         {
             throw new ArgumentNullException(nameof(options));
         }
-        
+
         serviceCollection.TryAddSingleton<IConvertingService, ConvertingService>();
 
         var converterImplementations = assemblies
             .SelectMany(s => s.GetTypes())
-            .Where(t => t.IsAssignable(typeof(IConverter<,>)) || t.IsAssignable(typeof(IReferenceConverter<,>)));
+            .Where(t => t.IsAssignable(typeof(IConverter<,>)) ||
+                        t.IsAssignable(typeof(IAsyncConverter<,>)) ||
+                        t.IsAssignable(typeof(IReferenceConverter<,>)) ||
+                        t.IsAssignable(typeof(IAsyncReferenceConverter<,>)))
+            .ToList();
+        
+        DiCompositionValidator.ValidateOrThrow(converterImplementations);
 
         foreach (var converterImplementation in converterImplementations)
         {
             var iface = converterImplementation
                 .GetInterfaces()
-                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IConverter<,>) || i.GetGenericTypeDefinition() == typeof(IReferenceConverter<,>));
+                .FirstOrDefault(i => i.IsGenericType &&
+                                     i.GetGenericTypeDefinition() == typeof(IConverter<,>) ||
+                                     i.GetGenericTypeDefinition() == typeof(IAsyncConverter<,>) ||
+                                     i.GetGenericTypeDefinition() == typeof(IReferenceConverter<,>) ||
+                                     i.GetGenericTypeDefinition() == typeof(IAsyncReferenceConverter<,>));
 
             if (iface == null)
             {
@@ -103,7 +117,8 @@ public static class DiCompositor
         // not possible to inject any other service there.
         serviceCollection.AddBuildInConverters();
 
-        var optionsServiceDescriptor = ServiceDescriptor.Describe(typeof(IConverterOptions), _ => options, ServiceLifetime.Singleton);
+        var optionsServiceDescriptor =
+            ServiceDescriptor.Describe(typeof(IConverterOptions), _ => options, ServiceLifetime.Singleton);
         serviceCollection.Add(optionsServiceDescriptor);
 
         return serviceCollection;
