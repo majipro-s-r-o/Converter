@@ -1,41 +1,42 @@
 name: Continues Integration
 
 on:
-  push:
-    branches-ignore:
-      - 'feature/*'
-
+    push:
+        branches:
+            - main
+        tags:
+            - '[0-9]+.[0-9]+.[0-9]+'
 jobs:
-  build:
+    build:
+        
+        runs-on: ubuntu-latest
+        
+        steps:
+            -   uses: actions/checkout@v4
+                with:
+                    # Unshallow fetch of Git history allows correct version calculation.
+                    fetch-depth: 0
 
-    runs-on: ubuntu-latest
+            -   name: Setup .NET
+                uses: actions/setup-dotnet@v4
+                with:
+                    dotnet-version: '10.0.x'
 
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        # Unshallow fetch of Git history allows correct version calculation.
-        fetch-depth: 0
+            -   name: Restore tools
+                run: dotnet tool restore
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.0.x'
+            -   name: Use GitVersion
+                id: gitversion
+                run: echo "version=$(dotnet gitversion /output json /showvariable MajorMinorPatch)" >> $GITHUB_OUTPUT
 
-    - name: Restore tools
-      run: dotnet tool restore
+            -   name: Restore dependencies
+                run: dotnet restore
 
-    - name: Use GitVersion
-      id: gitversion
-      run: echo "version=$(dotnet gitversion /output json /showvariable MajorMinorPatch)" >> $GITHUB_OUTPUT
+            -   name: Build
+                run: dotnet build --configuration Release --no-restore
 
-    - name: Restore dependencies
-      run: dotnet restore
+            -   name: Pack
+                run: dotnet pack --no-build --configuration Release /p:Version=${{ steps.gitversion.outputs.version }} /p:AssemblyVersion=${{ steps.gitversion.outputs.version }} /p:InformationalVersion=${{ steps.gitversion.outputs.version }}  --output artifacts
 
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
-
-    - name: Pack
-      run: dotnet pack --no-build --configuration Release /p:Version=${{ steps.gitversion.outputs.version }} /p:AssemblyVersion=${{ steps.gitversion.outputs.version }} /p:InformationalVersion=${{ steps.gitversion.outputs.version }}  --output artifacts
-
-    - name: Publish
-      run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+            -   name: Publish
+                run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
