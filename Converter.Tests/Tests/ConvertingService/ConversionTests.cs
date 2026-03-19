@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Majipro.Converter.Tests.Comparers;
 using Majipro.Converter.Tests.Mocks;
 
 namespace Majipro.Converter.Tests.Tests.ConvertingService;
@@ -14,20 +11,63 @@ public sealed class ConversionTests : ConversionTestBase
     {
         await ClassInitializeAsync();
     }
-    
+
     [TestMethod]
-    public void WhenConvertingBetweenTwoObjectsThenConvertData()
+    public void WhenConvertingBetweenTwoObjectsUsingConverterThenConvertData()
+    {
+        AssertConversion<Source, Target>();
+    }
+
+    [TestMethod]
+    public void WhenConvertingBetweenTwoObjectsUsingAsyncConverterThenConvertData()
+    { 
+        AssertConversion<SourceAsync, TargetAsync>(); 
+    }
+
+    private void AssertConversion<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
     {
         // Arrange
-        var expected = new Source
+        var expected = new TSource
         {
             Integer = 1
         };
 
         // Act
         var actual = ConvertingService
-            .Convert<Source, Target>(expected);
-        
+            .Convert<TSource, TTarget>(expected);
+
+        // Assert
+        Assert.AreEqual(expected.Integer, actual.Integer);
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoObjectsUsingConverterThenConvertData()
+    {
+        await AssertConversionAsync<Source, Target>();
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoObjectsUsingAsyncConverterThenConvertData()
+    {
+        await AssertConversionAsync<SourceAsync, TargetAsync>();
+    }
+
+    private async ValueTask AssertConversionAsync<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
+    {
+        // Arrange
+        var expected = new TSource
+        {
+            Integer = 1
+        };
+
+        // Act
+        var actual = await ConvertingService
+            .ConvertAsync<TSource, TTarget>(expected);
+
         // Assert
         Assert.AreEqual(expected.Integer, actual.Integer);
     }

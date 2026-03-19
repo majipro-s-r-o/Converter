@@ -14,35 +14,51 @@ public sealed class SetConversionTest : ConversionTestBase
     {
         await ClassInitializeAsync();
     }
-    
+
     [TestMethod]
     public void WhenConvertingBetweenTwoHashSetsWithoutFallbackThenConvertAllItems()
     {
-        // Arrange
-        var expected = new HashSet<Source>
-        {
-            new Source
-            {
-                Integer = 1
-            }
-        };
-
-        // Act
-        var actual = ConvertingService
-            .Convert<Source, Target>(expected)
-            .ToHashSet();
-        
-        // Assert
-        HashSetAssert.AreEqual(expected, actual, new SourceTargetComparer());
+        AssertConversionWithoutFallback<Source, Target>();
     }
-    
+
+    [TestMethod]
+    public void WhenConvertingBetweenTwoHashSetsWithoutFallbackUsingAsyncConverterThenConvertAllItems()
+    {
+        AssertConversionWithoutFallback<SourceAsync, TargetAsync>();
+    }
+
     [TestMethod]
     public void WhenConvertingBetweenTwoHashSetsWithFallbackThenConvertAllItems()
     {
+        AssertConversionWithFallback<Source, Target>();
+    }
+
+    [TestMethod]
+    public void WhenConvertingBetweenTwoHashSetsWithFallbackUsingAsyncConverterThenConvertAllItems()
+    {
+        AssertConversionWithFallback<SourceAsync, TargetAsync>();
+    }
+
+    [TestMethod]
+    public void WhenConvertingBetweenTwoHashSetWithFallbackThenUseFallbackIfInputIsNull()
+    {
+        AssertFallbackIfInputIsNull<Source, Target>();
+    }
+
+    [TestMethod]
+    public void WhenConvertingBetweenTwoHashSetWithFallbackUsingAsyncConverterThenUseFallbackIfInputIsNull()
+    {
+        AssertFallbackIfInputIsNull<SourceAsync, TargetAsync>();
+    }
+
+    private void AssertConversionWithoutFallback<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
+    {
         // Arrange
-        var expected = new HashSet<Source>
+        var expected = new HashSet<TSource>
         {
-            new Source
+            new TSource
             {
                 Integer = 1
             }
@@ -50,22 +66,138 @@ public sealed class SetConversionTest : ConversionTestBase
 
         // Act
         var actual = ConvertingService
-            .Convert<Source, Target>(expected, () => new HashSet<Target>())
+            .Convert<TSource, TTarget>(expected)
             .ToHashSet();
-        
+
         // Assert
-        HashSetAssert.AreEqual(expected, actual, new SourceTargetComparer());
+        HashSetAssert.AreEqual(expected, actual, new HasIntegerComparer());
     }
-    
-    [TestMethod]
-    public void WhenConvertingBetweenTwoHashSetWithFallbackThenUseFallbackIfInputIsNull()
+
+    private void AssertConversionWithFallback<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
+    {
+        // Arrange
+        var expected = new HashSet<TSource>
+        {
+            new TSource
+            {
+                Integer = 1
+            }
+        };
+
+        // Act
+        var actual = ConvertingService
+            .Convert<TSource, TTarget>(expected, () => new HashSet<TTarget>())
+            .ToHashSet();
+
+        // Assert
+        HashSetAssert.AreEqual(expected, actual, new HasIntegerComparer());
+    }
+
+    private void AssertFallbackIfInputIsNull<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
     {
         // Act
         var actual = ConvertingService
-            .Convert<Source, Target>(null, () => new List<Target>())
+            .Convert<TSource, TTarget>(null, () => new List<TTarget>())
             .ToHashSet();
-        
+
         // Assert
-        HashSetAssert.AreEqual(new HashSet<Target>(), actual, new SourceTargetComparer());
+        HashSetAssert.AreEqual(new HashSet<TTarget>(), actual, new HasIntegerComparer());
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoHashSetsWithoutFallbackThenConvertAllItems()
+    {
+        await AssertConversionWithoutFallbackAsync<Source, Target>();
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoHashSetsWithoutFallbackUsingAsyncConverterThenConvertAllItems()
+    {
+        await AssertConversionWithoutFallbackAsync<SourceAsync, TargetAsync>();
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoHashSetsWithFallbackThenConvertAllItems()
+    {
+        await AssertConversionWithFallbackAsync<Source, Target>();
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoHashSetsWithFallbackUsingAsyncConverterThenConvertAllItems()
+    {
+        await AssertConversionWithFallbackAsync<SourceAsync, TargetAsync>();
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoHashSetsWithFallbackThenUseFallbackIfInputIsNull()
+    {
+        await AssertFallbackIfInputIsNullAsync<Source, Target>();
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoHashSetsWithFallbackUsingAsyncConverterThenUseFallbackIfInputIsNull()
+    {
+        await AssertFallbackIfInputIsNullAsync<SourceAsync, TargetAsync>();
+    }
+
+    private async ValueTask AssertConversionWithoutFallbackAsync<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
+    {
+        // Arrange
+        var expected = new HashSet<TSource>
+        {
+            new TSource
+            {
+                Integer = 1
+            }
+        };
+
+        // Act
+        var actual = (await ConvertingService
+            .ConvertAsync<TSource, TTarget>(expected))
+            .ToHashSet();
+
+        // Assert
+        HashSetAssert.AreEqual(expected, actual, new HasIntegerComparer());
+    }
+
+    private async ValueTask AssertConversionWithFallbackAsync<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
+    {
+        // Arrange
+        var expected = new HashSet<TSource>
+        {
+            new TSource
+            {
+                Integer = 1
+            }
+        };
+
+        // Act
+        var actual = (await ConvertingService
+            .ConvertAsync<TSource, TTarget>(expected, () => new HashSet<TTarget>()))
+            .ToHashSet();
+
+        // Assert
+        HashSetAssert.AreEqual(expected, actual, new HasIntegerComparer());
+    }
+
+    private async ValueTask AssertFallbackIfInputIsNullAsync<TSource, TTarget>()
+        where TSource : IHasInteger, new()
+        where TTarget : IHasInteger
+    {
+        // Act
+        var actual = (await ConvertingService
+            .ConvertAsync<TSource, TTarget>((ISet<TSource>)null, () => new HashSet<TTarget>()))
+            .ToHashSet();
+
+        // Assert
+        HashSetAssert.AreEqual(new HashSet<TTarget>(), actual, new HasIntegerComparer());
     }
 }

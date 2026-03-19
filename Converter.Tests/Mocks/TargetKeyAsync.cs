@@ -1,6 +1,6 @@
 namespace Majipro.Converter.Tests.Mocks;
 
-public sealed record SourceValue : IHasInteger
+public sealed record TargetKeyAsync : IHasInteger
 {
     public int Integer { get; init; }
 }

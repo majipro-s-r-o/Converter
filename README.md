@@ -120,12 +120,13 @@ internal sealed class EntityToDomainConverter : IConverter<Entity, Domain>
 ## Build in Converters
 ### Available build in converters
 Library offers build in Converters that you can use using standard API such as `_convertingService.Convert<TFrom, TTo>()`. Lifetime of these converters is fixed and it is always `Singleton`. See the list of build in conversions:
+
 | From | To | Options |
-| ------- | ------- | ------- |
-| `string` | `bool` ||
-| `string` | `byte` ||
-| `string` | `int` ||
-| `string` | `long` ||
+| --- | --- | --- |
+| `string` | `bool` | |
+| `string` | `byte` | |
+| `string` | `int` | |
+| `string` | `long` | |
 | `string` | `DateTime` | `FormatProvider`, `DateTimeStyles` |
 | `string` | `DateTimeOffset` | `FormatProvider`, `DateTimeStyles` |
 | `string` | `decimal` | `FormatProvider`, `NumberStyles` |
@@ -138,6 +139,96 @@ It is recommended to override default converters by manually registering them **
 builder.Services.AddSingleton<IConverter<string, bool>, MyStringToBoolConverter>(); // Your overriden converter
 builder.Services.AddConverting<MyClass>();
 ```
+
+## Async conversions
+Every `Convert` method on `IConvertingService` has an async counterpart `ConvertAsync` that returns `ValueTask<T>` and accepts an optional `CancellationToken`. This applies to single-object, reference, collection (`ISet`, `IList`, `IEnumerable`), and dictionary conversions.
+
+### How to create an async converter
+Implement `IAsyncConverter<TFrom, TTo>` instead of `IConverter<TFrom, TTo>`:
+```csharp
+internal sealed class EntityToDomainAsyncConverter : IAsyncConverter<Entity, Domain>
+{
+    private readonly IExternalService _externalService;
+
+    public EntityToDomainAsyncConverter(IExternalService externalService)
+    {
+        _externalService = externalService;
+    }
+
+    public async Task<Domain> ConvertAsync(Entity from, CancellationToken cancellationToken)
+    {
+        var additionalData = await _externalService.GetDataAsync(from.Id, cancellationToken);
+
+        return new Domain
+        {
+            Firstname = from.Firstname,
+            Lastname = from.Lastname,
+            AdditionalData = additionalData
+        };
+    }
+}
+```
+
+### How to create an async reference converter
+Implement `IAsyncReferenceConverter<TFrom, TTo>` instead of `IReferenceConverter<TFrom, TTo>`:
+```csharp
+internal sealed class EntityToDomainAsyncReferenceConverter : IAsyncReferenceConverter<Entity, Domain>
+{
+    public async Task<Domain> ConvertAsync(Entity from, CancellationToken cancellationToken)
+    {
+        // Required by IAsyncConverter<TFrom, TTo> (base interface)
+        throw new NotSupportedException();
+    }
+
+    public async Task<Domain> ConvertAsync(Entity from, Domain to, CancellationToken cancellationToken)
+    {
+        to.Firstname = from.Firstname;
+        to.Lastname = from.Lastname;
+        return to;
+    }
+}
+```
+
+### How to call async conversions
+Use `ConvertAsync` instead of `Convert`:
+```csharp
+public sealed class BusinessLogicService
+{
+    private readonly IConvertingService _convertingService;
+
+    public BusinessLogicService(IConvertingService convertingService)
+    {
+        _convertingService = convertingService;
+    }
+
+    public async Task<Domain> GetDomainAsync(CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityAsync();
+
+        // Single object
+        var domain = await _convertingService.ConvertAsync<Entity, Domain>(entity, cancellationToken);
+
+        return domain;
+    }
+
+    public async Task<IList<Domain>> GetDomainsAsync(CancellationToken cancellationToken)
+    {
+        var entities = await GetEntitiesAsync();
+
+        // Collection — converts each item using the converter
+        var domains = await _convertingService.ConvertAsync<Entity, Domain>(entities, cancellationToken);
+
+        return domains;
+    }
+}
+```
+
+### Sync and async interoperability
+Sync and async converters are interoperable:
+- If you call `Convert` (sync) and only an `IAsyncConverter` is registered, the library will block on the async converter.
+- If you call `ConvertAsync` and only an `IConverter` (sync) is registered, the sync result is wrapped in a `ValueTask`.
+
+This means you can migrate converters from sync to async (or vice versa) without changing the calling code.
 
 ## Advanced scenarios
 ### Inject `IConvert<TFrom, TTo>` directly

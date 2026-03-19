@@ -1,7 +1,7 @@
 ﻿namespace Majipro.Converter;
 
 /// <summary>
-/// Reference Convertor between <see cref="TFrom"/> and <see cref="TTo"/>.
+/// Reference Converter between <see cref="TFrom"/> and <see cref="TTo"/>.
 /// </summary>
 /// <typeparam name="TFrom">Source type.</typeparam>
 /// <typeparam name="TTo">Target type.</typeparam>
