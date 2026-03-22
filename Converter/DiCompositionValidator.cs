@@ -9,18 +9,37 @@ internal static class DiCompositionValidator
     internal static void ValidateOrThrow(IList<Type> converterImplementationsTypes)
     {
         var descriptors = new List<ConverterImplementationDescriptor>();
-        
+
         foreach (var converterImplementationType in converterImplementationsTypes)
         {
             var implementedInterfaces = converterImplementationType.GetInterfaces();
+
+            var referenceConverterArgs = new HashSet<ConverterImplementationDescriptor>();
+
+            foreach (var implementedInterface in implementedInterfaces)
+            {
+                if (implementedInterface.IsGenericType == false || implementedInterface.IsGenericTypeDefinition)
+                {
+                    continue;
+                }
+
+                var genericTypeDefinition = implementedInterface.GetGenericTypeDefinition();
+
+                if (genericTypeDefinition == typeof(IReferenceConverter<,>) ||
+                    genericTypeDefinition == typeof(IAsyncReferenceConverter<,>))
+                {
+                    var args = implementedInterface.GetGenericArguments();
+                    referenceConverterArgs.Add(new ConverterImplementationDescriptor(args[0], args[1]));
+                }
+            }
 
             foreach (var implementedInterface in implementedInterfaces)
             {
                 if (implementedInterface.IsGenericTypeDefinition)
                 {
-                    continue;    
+                    continue;
                 }
-                
+
                 var interfaceType = implementedInterface.GetGenericTypeDefinition();
 
                 if (interfaceType != typeof(IConverter<,>) &&
@@ -30,12 +49,16 @@ internal static class DiCompositionValidator
                 {
                     continue;
                 }
-                
+
                 var genericArguments = implementedInterface.GetGenericArguments();
 
-                var converterImplementationDescriptor = new ConverterImplementationDescriptor(genericArguments);
-                
-                descriptors.Add(converterImplementationDescriptor);
+                if ((interfaceType == typeof(IConverter<,>) || interfaceType == typeof(IAsyncConverter<,>)) &&
+                    referenceConverterArgs.Contains(new ConverterImplementationDescriptor(genericArguments[0], genericArguments[1])))
+                {
+                    continue;
+                }
+
+                descriptors.Add(new ConverterImplementationDescriptor(genericArguments[0], genericArguments[1]));
             }
         }
         
@@ -53,16 +76,10 @@ internal static class DiCompositionValidator
         }
     }
 
-    private sealed record ConverterImplementationDescriptor
+    private readonly record struct ConverterImplementationDescriptor(Type From, Type To)
     {
-        public Type From { get; }
+        public Type From { get; } = From;
         
-        public Type To { get; }
-
-        public ConverterImplementationDescriptor(params Type[] types)
-        {
-            From = types[0];
-            To = types[1];
-        }
+        public Type To { get; } = To;
     }
 }
