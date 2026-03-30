@@ -54,6 +54,88 @@ public sealed class ConversionTests : ConversionTestBase
         await AssertConversionAsync<SourceAsync, TargetAsync>();
     }
 
+    [TestMethod]
+    public void WhenConvertingBetweenTwoObjectsUsingReferenceConverterThenConvertData()
+    {
+        // Arrange
+        var source = new SourceRef
+        {
+            Integer = 1
+        };
+
+        // Act
+        var actual = ConvertingService
+            .Convert<SourceRef, TargetRef>(source);
+
+        // Assert
+        Assert.AreEqual(source.Integer, actual.Integer);
+    }
+
+    [TestMethod]
+    public void WhenConvertingToExistingInstanceUsingReferenceConverterThenConvertAndPreserveData()
+    {
+        // Arrange
+        var source = new SourceRef
+        {
+            Integer = 42
+        };
+
+        var existingTarget = new TargetRef
+        {
+            Integer = 0,
+            Text = "preserved"
+        };
+
+        // Act
+        var actual = ConvertingService
+            .Convert<SourceRef, TargetRef>(source, existingTarget);
+
+        // Assert
+        Assert.AreEqual(source.Integer, actual.Integer);
+        Assert.AreEqual("preserved", actual.Text);
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingUsingAsyncOverloadBetweenTwoObjectsUsingReferenceConverterThenConvertData()
+    {
+        // Arrange
+        var source = new SourceRef
+        {
+            Integer = 1
+        };
+
+        // Act
+        var actual = await ConvertingService
+            .ConvertAsync<SourceRef, TargetRef>(source);
+
+        // Assert
+        Assert.AreEqual(source.Integer, actual.Integer);
+    }
+
+    [TestMethod]
+    public async ValueTask WhenConvertingToExistingInstanceUsingAsyncOverloadOfReferenceConverterThenConvertAndPreserveData()
+    {
+        // Arrange
+        var source = new SourceRef
+        {
+            Integer = 42
+        };
+
+        var existingTarget = new TargetRef
+        {
+            Integer = 0,
+            Text = "preserved"
+        };
+
+        // Act
+        var actual = await ConvertingService
+            .ConvertAsync<SourceRef, TargetRef>(source, existingTarget);
+
+        // Assert
+        Assert.AreEqual(source.Integer, actual.Integer);
+        Assert.AreEqual("preserved", actual.Text);
+    }
+
     private async ValueTask AssertConversionAsync<TSource, TTarget>()
         where TSource : IHasInteger, new()
         where TTarget : IHasInteger
