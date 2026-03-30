@@ -95,21 +95,19 @@ public static class DiCompositor
 
         foreach (var converterImplementation in converterImplementations)
         {
-            var iface = converterImplementation
+            var ifaces = converterImplementation
                 .GetInterfaces()
-                .FirstOrDefault(i => i.IsGenericType &&
-                                     i.GetGenericTypeDefinition() == typeof(IConverter<,>) ||
-                                     i.GetGenericTypeDefinition() == typeof(IAsyncConverter<,>) ||
-                                     i.GetGenericTypeDefinition() == typeof(IReferenceConverter<,>) ||
-                                     i.GetGenericTypeDefinition() == typeof(IAsyncReferenceConverter<,>));
+                .Where(i => i.IsGenericType &&
+                            (i.GetGenericTypeDefinition() == typeof(IConverter<,>) ||
+                             i.GetGenericTypeDefinition() == typeof(IAsyncConverter<,>) ||
+                             i.GetGenericTypeDefinition() == typeof(IReferenceConverter<,>) ||
+                             i.GetGenericTypeDefinition() == typeof(IAsyncReferenceConverter<,>)));
 
-            if (iface == null)
+            foreach (var iface in ifaces)
             {
-                continue;
+                var converterServiceDescriptor = ServiceDescriptor.Describe(iface, converterImplementation, options.ServiceLifetime);
+                serviceCollection.TryAdd(converterServiceDescriptor);
             }
-
-            var converterServiceDescriptor = ServiceDescriptor.Describe(iface, converterImplementation, options.ServiceLifetime);
-            serviceCollection.TryAdd(converterServiceDescriptor);
         }
 
         // Add after user converters registration, so the user can override.
