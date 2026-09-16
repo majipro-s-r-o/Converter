@@ -1,3 +1,4 @@
+using Majipro.Converter.Abstrations;
 using Majipro.Converter;
 using Majipro.Converter.Generator.Test.Tests;
 

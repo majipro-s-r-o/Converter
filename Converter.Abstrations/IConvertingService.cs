@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-
-namespace Majipro.Converter;
+namespace Majipro.Converter.Abstrations;
 
 public interface IConvertingService
 {

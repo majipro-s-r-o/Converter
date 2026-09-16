@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -20,12 +20,13 @@ There is no linter/formatter step; MSTest analyzers (MSTEST####) and Roslyn warn
 
 | Project | TFM | Purpose |
 | --- | --- | --- |
+| `Converter.Abstrations/` | netstandard2.1 | The four converter interfaces + `IConvertingService`, packed as NuGet `Majipro.Converter.Abstrations`. Shared by the library **and** the generator, so neither side identifies them by name. Deliberately dependency free — `IConverterOptions` stays in `Converter/` because it exposes `ServiceLifetime`, which would drag `Microsoft.Extensions.DependencyInjection.Abstractions` into the generator's analyzer context |
 | `Converter/` | netstandard2.1 | The shipped library, packed as NuGet `Majipro.Converter` (`GeneratePackageOnBuild`) |
 | `Converter.Tests/` | net10.0 | MSTest suite for the library |
 | `Converter.Generator/` | net10.0 | Roslyn `ISourceGenerator` that emits `IConverter<TFrom, TTo>` implementations |
 | `Converter.Generator.Test/` | net10.0 | MSTest suite for the generator |
 
-`Directory.Build.props` applies to every project and rewrites identity: `AssemblyName` and `RootNamespace` become `Majipro.<ProjectFolderName>`. So the folder `Converter` is namespace `Majipro.Converter`, and `Converter.Tests` is `Majipro.Converter.Tests`. It also sets `TargetFramework` to netstandard2.1 — the test and generator projects override it to net10.0.
+`Directory.Build.props` applies to every project and rewrites identity: `AssemblyName` and `RootNamespace` become `Majipro.<ProjectFolderName>`. So the folder `Converter` is namespace `Majipro.Converter`, `Converter.Tests` is `Majipro.Converter.Tests`, and `Converter.Abstrations` is `Majipro.Converter.Abstrations` (the folder name carries the typo, so the namespace and the package id do too). It also sets `TargetFramework` to netstandard2.1 — the test and generator projects override it to net10.0.
 
 The library targets **netstandard2.1**: no implicit usings, no nullable context, explicit `using System;` everywhere, and only APIs available on that surface. `LangVersion` is `latest`, so modern syntax (file-scoped namespaces, `record struct`) is fine.
 
@@ -35,8 +36,8 @@ The library targets **netstandard2.1**: no implicit usings, no nullable context,
 
 Conversion is done by DI-registered services, not by reflection-based mapping. Three moving parts:
 
-**Converter interfaces** (`Converter/I*Converter.cs`) — four contracts users implement:
-`IConverter<TFrom, TTo>` (sync, new instance), `IAsyncConverter<TFrom, TTo>`, `IReferenceConverter<TFrom, TTo>` (fills an existing target; extends `IConverter`), `IAsyncReferenceConverter<TFrom, TTo>` (extends `IAsyncConverter`). Any change to this set must be mirrored in **all** of: `DiCompositor` (scan + registration filters), `DiCompositionValidator` (duplicate detection), and `ConvertingService`'s four `Get*Delegate*` resolvers.
+**Converter interfaces** (`Converter.Abstrations/I*.cs`, namespace `Majipro.Converter.Abstrations`) — four contracts users implement:
+`IConverter<TFrom, TTo>` (sync, new instance), `IAsyncConverter<TFrom, TTo>`, `IReferenceConverter<TFrom, TTo>` (fills an existing target; extends `IConverter`), `IAsyncReferenceConverter<TFrom, TTo>` (extends `IAsyncConverter`). Any change to this set must be mirrored in **all** of: `DiCompositor` (scan + registration filters), `DiCompositionValidator` (duplicate detection), and `ConvertingService`'s four `Get*Delegate*` resolvers. Everything in `Converter/` needs an explicit `using Majipro.Converter.Abstrations;` — the abstractions namespace is a child of `Majipro.Converter`, not an ancestor, so it is not found implicitly.
 
 **`DiCompositor.AddConverting`** (`Converter/DiCompositor.cs`) — the registration entry point. It scans the supplied assemblies for classes implementing any converter interface (`TypeExtensions.IsAssignable`), runs `DiCompositionValidator.ValidateOrThrow` (throws `InvalidOperationException` on two implementations claiming the same `From -> To` pair; a reference converter's own inherited `IConverter`/`IAsyncConverter` pair is deliberately not counted as a duplicate), then `TryAdd`s each *closed* interface it implements at `ConverterOptions.ServiceLifetime` (default Singleton). Built-in `string -> primitive` converters are registered **after** user converters and always as Singleton, so a user registration of the same pair wins (`TryAdd` semantics). `IConverterOptions` is registered last as a singleton instance and can be injected into user converters.
 
@@ -65,6 +66,8 @@ Add the class under `Converter/Converters/`, register it in `DiCompositorConvert
 
 `Converter.Generator/` mirrors `github.com/paukertj/autoconverter` (the predecessor project) but is much smaller, because this library registers converters by **runtime assembly scan**: the generator only has to emit a public class implementing `IConverter<TFrom, TTo>` and `DiCompositor.AddConverting` finds it. There is no generated DI wiring and no `[WiringEntrypoint]` attribute.
 
+The generator has a `PrivateAssets="all"` project reference to `Converter.Abstrations` and resolves the symbols it looks for through `compilation.GetTypeByMetadataName(typeof(IConvertingService).FullName)` (and `typeof(IConverter<,>)`, `typeof(IAsyncConverter<,>)`), so renaming or moving an interface breaks the generator's build instead of silently generating nothing.
+
 Pipeline: `ConvertCallsSyntaxReceiver` collects every `x.Method<A, B>(...)` invocation → `Analysis/ConversionAnalyzer` keeps those that bind to a method on `Majipro.Converter.IConvertingService`, dedupes the `From -> To` pairs, drops pairs somebody already implemented by hand (otherwise `DiCompositionValidator` would throw about duplicates) and pairs it cannot map, and matches properties → `Generating/ConverterSourceBuilder` builds the class as a Roslyn syntax tree (`SyntaxFactory`, rendered by `NormalizeWhitespace()`, like the reference project) with fully qualified type names, in namespace `Majipro.Converter.Generated`. Anything thrown is reported as diagnostic `MC0001` instead of killing the build.
 
 Current mapping rule is deliberately dumb: **same property name + exactly the same property type**, public getter on the source, public setter (or `init`) on the target, base type properties included. Not handled yet (each is a place to extend): type mismatches needing a nested converter, collections, `ConvertAsync`/reference-converter call sites (a plain `IConverter` gets generated for them), `ConvertExplicitly` extension methods, generic and positional-record targets, and diagnostics for target properties that stay unmapped.
@@ -83,5 +86,6 @@ Under `Converter.Generator.Test/Tests/<Case>/` add three files:
 
 The solution builds clean and both suites pass (136 + 5). Open items:
 - `Converter.Tests/Tests/Converters/StringToDateTimeOffsetConverterTests.cs` warns MSTEST0042 — two identical `DataRow` attributes (indices 3 and 4), most likely a copy/paste error hiding a case that was meant to be covered.
-- `Converter.Generator` targets net10.0, so it cannot be loaded as an analyzer by the compiler yet — it only runs in-process from the tests. Packing it means moving it to netstandard2.0 and adding the analyzer packaging bits (see the reference project's csproj).
+- `Converter.Generator` targets net10.0, so it cannot be loaded as an analyzer by the compiler yet — it only runs in-process from the tests. Packing it means moving it (and `Converter.Abstrations`, which it now references) to netstandard2.0 and adding the analyzer packaging bits: both dlls into `analyzers/dotnet/cs` (see the reference project's csproj). `Converter.Abstrations` has no package references, so those two dlls are all the analyzer context needs.
+- `dotnet pack` on the solution currently produces three packages — `Majipro.Converter`, `Majipro.Converter.Abstrations` (a proper dependency of the first one) and `Majipro.Converter.Generator`. The last one is a plain `lib/net10.0` package that does nothing when installed, and `.github/workflows/main.yaml` pushes `artifacts/*.nupkg` on a `v*` tag, so it would land on nuget.org as is. Set `IsPackable=false` on the generator until the analyzer packaging is done.
 - `Converter.Generator.Test/Test1.cs` is leftover `dotnet new mstest` scaffolding.

@@ -1,5 +1,7 @@
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Majipro.Converter.Abstrations;
 using Majipro.Converter.Generator.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,10 +14,6 @@ namespace Majipro.Converter.Generator.Analysis;
 /// </summary>
 internal sealed class ConversionAnalyzer
 {
-    private const string ConvertingServiceMetadataName = "Majipro.Converter.IConvertingService";
-    private const string ConverterMetadataName = "Majipro.Converter.IConverter`2";
-    private const string AsyncConverterMetadataName = "Majipro.Converter.IAsyncConverter`2";
-
     private readonly Compilation _compilation;
     private readonly Dictionary<SyntaxTree, SemanticModel> _semanticModels = new Dictionary<SyntaxTree, SemanticModel>();
 
@@ -27,9 +25,9 @@ internal sealed class ConversionAnalyzer
     {
         _compilation = compilation;
 
-        _convertingService = compilation.GetTypeByMetadataName(ConvertingServiceMetadataName);
-        _converter = compilation.GetTypeByMetadataName(ConverterMetadataName);
-        _asyncConverter = compilation.GetTypeByMetadataName(AsyncConverterMetadataName);
+        _convertingService = GetTypeSymbol(compilation, typeof(IConvertingService));
+        _converter = GetTypeSymbol(compilation, typeof(IConverter<,>));
+        _asyncConverter = GetTypeSymbol(compilation, typeof(IAsyncConverter<,>));
     }
 
     public IReadOnlyList<ConversionInfo> Analyze(IReadOnlyList<InvocationExpressionSyntax> convertCalls)
@@ -38,7 +36,7 @@ internal sealed class ConversionAnalyzer
 
         if (_convertingService == null || _converter == null)
         {
-            // Majipro.Converter is not referenced, there is nothing to generate.
+            // Majipro.Converter.Abstrations is not referenced, there is nothing to generate.
             return result;
         }
 
@@ -190,6 +188,17 @@ internal sealed class ConversionAnalyzer
     private static string GetConversionKey(ITypeSymbol from, ITypeSymbol to)
     {
         return from.ToFullyQualifiedName() + "->" + to.ToFullyQualifiedName();
+    }
+
+    /// <summary>
+    /// Looks the type up in the analyzed compilation by the metadata name of the type the generator
+    /// itself was compiled against, so there is no name to keep in sync by hand.
+    /// </summary>
+    private static INamedTypeSymbol? GetTypeSymbol(Compilation compilation, Type type)
+    {
+        return type.FullName == null
+            ? null
+            : compilation.GetTypeByMetadataName(type.FullName);
     }
 
     private SemanticModel GetSemanticModel(SyntaxTree syntaxTree)

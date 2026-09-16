@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Majipro.Converter.Abstrations;
 
 namespace Majipro.Converter.Extensions;
 

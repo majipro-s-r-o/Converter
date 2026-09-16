@@ -1,3 +1,4 @@
+using Majipro.Converter.Abstrations;
 namespace Majipro.Converter.Converters;
 
 internal sealed class StringToDecimalConverter : IConverter<string, decimal>

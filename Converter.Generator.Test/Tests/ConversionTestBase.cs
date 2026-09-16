@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Majipro.Converter.Abstrations;
 using Majipro.Converter.Generator.Test.Extensions;
 using Majipro.Converter.Generator.Test.Helpers;
 using Microsoft.CodeAnalysis;

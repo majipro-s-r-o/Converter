@@ -1,6 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Majipro.Converter.Abstrations;
 using Majipro.Converter.Generator.Analysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -19,7 +20,7 @@ internal static class ConverterSourceBuilder
 {
     internal const string GeneratedNamespace = "Majipro.Converter.Generated";
 
-    private const string ConvertMethodName = "Convert";
+    private const string ConvertMethodName = nameof(IConverter<object, object>.Convert);
     private const string FromParameterName = "from";
 
     internal static SourceText Build(ConversionInfo conversion)

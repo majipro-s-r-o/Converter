@@ -1,8 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Majipro.Converter;
+using Majipro.Converter.Abstrations;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +29,8 @@ public class CompilingHelper : ICompilingHelper
 
         AddAssemblyFromType<IServiceCollection>();
         AddAssemblyFromType<IConvertingService>();
+        // Abstrations and Converter are two assemblies now, the compiled test case needs both.
+        AddAssembly(typeof(DiCompositor).Assembly);
         AddAssemblyFromType<ServiceProvider>();
         AddAssemblyFromType<Exception>();
     }

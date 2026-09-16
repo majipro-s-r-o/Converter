@@ -17,6 +17,14 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The generator resolves the converter interfaces by their real types instead of by name.
+             PrivateAssets keeps the reference out of the consumers of the generator - once this
+             project is packed as an analyzer, Majipro.Converter.Abstrations.dll has to be packed
+             into analyzers/dotnet/cs next to it. -->
+        <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
         <InternalsVisibleTo Include="Majipro.Converter.Generator.Test" />
     </ItemGroup>
 </Project>
