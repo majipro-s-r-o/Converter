@@ -1,0 +1,100 @@
+using Majipro.Converter.Abstrations;
+using Majipro.Converter.Generator.Test;
+
+namespace Majipro.Converter.Generator.Test.Conversions.ImplementedConverters;
+
+public class ImplementedConvertersComposition : TestCompositionBase
+{
+    public ImplementedConvertersTestCase.WrittenConverterTo ConvertWrittenConverter(
+        IConvertingService convertingService,
+        ImplementedConvertersTestCase.WrittenConverterFrom from)
+    {
+        return convertingService
+            .Convert<ImplementedConvertersTestCase.WrittenConverterFrom,
+                ImplementedConvertersTestCase.WrittenConverterTo>(from);
+    }
+
+    public ImplementedConvertersTestCase.WrittenReferenceTo ConvertWrittenReference(
+        IConvertingService convertingService,
+        ImplementedConvertersTestCase.WrittenReferenceFrom from,
+        ImplementedConvertersTestCase.WrittenReferenceTo to)
+    {
+        return convertingService
+            .Convert<ImplementedConvertersTestCase.WrittenReferenceFrom,
+                ImplementedConvertersTestCase.WrittenReferenceTo>(from, to);
+    }
+
+    public ImplementedConvertersTestCase.GeneratedTo ConvertGenerated(
+        IConvertingService convertingService,
+        ImplementedConvertersTestCase.GeneratedFrom from)
+    {
+        return convertingService
+            .Convert<ImplementedConvertersTestCase.GeneratedFrom,
+                ImplementedConvertersTestCase.GeneratedTo>(from);
+    }
+
+    public long ConvertNumber(IConvertingService convertingService, int from)
+    {
+        return convertingService.Convert<int, long>(from);
+    }
+}
+
+/// <summary>
+/// Half of what a generated converter would be: the value conversion, without the reference one.
+/// The generator can not write the missing half without claiming this one too, so it writes nothing
+/// for the pair - the reference converter is the author's to add.
+/// </summary>
+public class WrittenConverter :
+    IConverter<ImplementedConvertersTestCase.WrittenConverterFrom, ImplementedConvertersTestCase.WrittenConverterTo>
+{
+    public const string Marker = "written converter: ";
+
+    public ImplementedConvertersTestCase.WrittenConverterTo Convert(
+        ImplementedConvertersTestCase.WrittenConverterFrom from)
+    {
+        return new ImplementedConvertersTestCase.WrittenConverterTo
+        {
+            Name = Marker + from.Name
+        };
+    }
+}
+
+/// <summary>
+/// Both conversions, written by hand. Nothing is generated for the pair either.
+/// </summary>
+public class WrittenReferenceConverter :
+    IReferenceConverter<ImplementedConvertersTestCase.WrittenReferenceFrom,
+        ImplementedConvertersTestCase.WrittenReferenceTo>
+{
+    public const string Marker = "written reference converter: ";
+
+    public ImplementedConvertersTestCase.WrittenReferenceTo Convert(
+        ImplementedConvertersTestCase.WrittenReferenceFrom from)
+    {
+        return Convert(from, new ImplementedConvertersTestCase.WrittenReferenceTo());
+    }
+
+    public ImplementedConvertersTestCase.WrittenReferenceTo Convert(
+        ImplementedConvertersTestCase.WrittenReferenceFrom from,
+        ImplementedConvertersTestCase.WrittenReferenceTo to)
+    {
+        to.Name = Marker + from.Name;
+
+        return to;
+    }
+}
+
+/// <summary>
+/// A pair no rule knows how to write, written by hand. Nothing is generated for it, and because it
+/// is implemented nothing is reported for it either - that is the line MC0004 draws: the error is
+/// about a pair nobody answers, not about a pair the generator does not write.
+/// </summary>
+public class NumberConverter : IConverter<int, long>
+{
+    public const long Marker = 1000;
+
+    public long Convert(int from)
+    {
+        return Marker + from;
+    }
+}
