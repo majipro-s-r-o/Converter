@@ -32,6 +32,30 @@ The library targets **netstandard2.1**: no implicit usings, no nullable context,
 
 `Converter.Extensions/` is a stale empty folder, not part of the solution.
 
+## Dependencies
+
+Every `PackageReference` declares a **minimum**, written as an explicit range — `Version="[2.0,)"`, never a bare number and never a pin like `[2.0]`. The point is that consumers of `Majipro.Converter` are not forced onto our build's version: the packed nuspec carries the floor, so a project already on an older `Microsoft.Extensions.DependencyInjection` keeps it.
+
+| Package | Project | Floor | Why that number |
+| --- | --- | --- | --- |
+| `Microsoft.Extensions.DependencyInjection.Abstractions` | `Converter` | `[2.0,)` | Only `IServiceCollection`, `ServiceDescriptor.Describe`, `TryAdd`/`TryAddSingleton` and `GetRequiredService` are used, all present in the netstandard2.0-era 2.0.0 |
+| `Microsoft.SourceLink.GitHub` | `Converter` | `[8.0.0,)` | `PrivateAssets="All"`, build time only, never reaches consumers (the .NET 8+ SDK ships SourceLink anyway) |
+| `Microsoft.CodeAnalysis.CSharp` | `Converter.Generator` | `[4.3.1,)` | This is the **oldest compiler the generator can be loaded into** — `ISourceGenerator`, the `SyntaxFactory` surface and `GetTypeByMetadataName` all exist there. Raising it raises the minimum Visual Studio / SDK of everybody using the generator |
+| `Microsoft.CodeAnalysis.Analyzers` | `Converter.Generator` | `[3.3.3,)` | Analyzer tooling only |
+| `Microsoft.CodeAnalysis.CSharp` | `Converter.Generator.Test` | `[4.3.1,)` | Deliberately the same floor, so the suite drives the generator on the oldest Roslyn it claims to support |
+| `MSTest` | both test projects | `[4.4.0,)` | `Assert.Throws<T>` (MSTest 4 dropped `Assert.ThrowsException`) and Microsoft.Testing.Platform |
+| `Microsoft.NET.Test.Sdk` | both test projects | `[18.10.1,)` | What the suites are validated against |
+| `Microsoft.Extensions.Hosting`, `Microsoft.Extensions.DependencyInjection` | test projects | `[8.0.0,)` | `Host.CreateDefaultBuilder` and `BuildServiceProvider` |
+
+`Converter.Abstrations` has no package references at all, and it should stay that way — see the note in the projects table.
+
+**It is fine to raise a floor.** If a feature is needed that the declared minimum does not have, bump that number to the lowest version that has it, in the same `[X,)` form, and say in the commit message which API forced it. Do not work around a missing API to keep an old floor; the floor is a statement about what we use, not a promise.
+
+Two things to know when changing these:
+
+- NuGet resolves the **lowest** version in range, so `dotnet restore` here really does compile against the floors — the build and the test suites are the verification that a floor is honest. After changing one, run `dotnet restore` (twice if the first pass leaves `NETSDK1064`/`NETSDK1127` behind, it writes the assets files before the packages land) and then `dotnet build` + `dotnet test`.
+- A direct reference below what a transitive dependency demands is `NU1605` (a downgrade error), not a silent bump. `Converter.Generator.Test` has to keep `Microsoft.Extensions.DependencyInjection.Abstractions` at `[8.0.0,)` because its `Microsoft.Extensions.DependencyInjection [8.0.0,)` requires that much.
+
 ## Architecture
 
 Conversion is done by DI-registered services, not by reflection-based mapping. Three moving parts:
