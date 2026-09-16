@@ -4,6 +4,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter", "Converter\Conv
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Tests", "Converter.Tests\Converter.Tests.csproj", "{733546DD-AC94-4CE2-9FBA-86B35B1D3BCF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Generator.Test", "Converter.Generator.Test\Converter.Generator.Test.csproj", "{604C1A99-BB79-4B04-9970-55AFBDE0B832}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Generator", "Converter.Generator\Converter.Generator.csproj", "{56BC9F6F-DC1A-4DC5-85A9-F7DE5518531D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,13 @@ Global
 		{733546DD-AC94-4CE2-9FBA-86B35B1D3BCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{733546DD-AC94-4CE2-9FBA-86B35B1D3BCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{733546DD-AC94-4CE2-9FBA-86B35B1D3BCF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{604C1A99-BB79-4B04-9970-55AFBDE0B832}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{604C1A99-BB79-4B04-9970-55AFBDE0B832}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{604C1A99-BB79-4B04-9970-55AFBDE0B832}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{604C1A99-BB79-4B04-9970-55AFBDE0B832}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56BC9F6F-DC1A-4DC5-85A9-F7DE5518531D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56BC9F6F-DC1A-4DC5-85A9-F7DE5518531D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56BC9F6F-DC1A-4DC5-85A9-F7DE5518531D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56BC9F6F-DC1A-4DC5-85A9-F7DE5518531D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
