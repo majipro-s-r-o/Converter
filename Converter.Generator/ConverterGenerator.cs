@@ -69,7 +69,7 @@ internal class ConverterGenerator : ISourceGenerator
             queue.Suppress(implemented);
         }
 
-        foreach (var requested in new ConvertCallSites(semantics, receiver.ConvertCalls).Pairs())
+        foreach (var requested in new ConvertCallSites(semantics, receiver).Pairs())
         {
             queue.Request(requested);
         }
