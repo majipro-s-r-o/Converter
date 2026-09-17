@@ -22,8 +22,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <!-- Compositions are compiled by this project and handed to the generator as source code. -->
-      <Compile Update="Tests\**\*Composition*.cs">
+      <!-- Compositions are compiled by this project and handed to the generator as source code,
+           so they have to be next to the test assembly at runtime. The glob covers both
+           Conversions\ and Validations\ as well as TestCompositionBase.cs they all derive from. -->
+      <Compile Update="**\*Composition*.cs">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Compile>
     </ItemGroup>

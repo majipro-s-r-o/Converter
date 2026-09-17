@@ -39,6 +39,19 @@ internal static class TypeSymbolExtensions
         return result;
     }
 
+    /// <summary>
+    /// The members an enum declares, in declaration order. They are the constant fields of the
+    /// type, which is also what tells them from the instance field carrying the value.
+    /// </summary>
+    internal static IReadOnlyList<IFieldSymbol> GetEnumMembers(this ITypeSymbol type)
+    {
+        return type
+            .GetMembers()
+            .OfType<IFieldSymbol>()
+            .Where(f => f.IsConst)
+            .ToList();
+    }
+
     internal static bool IsReadable(this IPropertySymbol property)
     {
         return property.GetMethod != null && property.GetMethod.DeclaredAccessibility == Accessibility.Public;
@@ -138,5 +151,16 @@ internal static class TypeSymbolExtensions
     internal static string ToFullyQualifiedName(this ITypeSymbol type)
     {
         return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+    }
+
+    /// <summary>
+    /// The fully qualified name the way a person reads it, without the <c>global::</c> alias that
+    /// only means something while the name is code.
+    /// </summary>
+    internal static string ToReadableName(this ITypeSymbol type)
+    {
+        return type.ToDisplayString(
+            SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(
+                SymbolDisplayGlobalNamespaceStyle.Omitted));
     }
 }

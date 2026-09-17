@@ -40,6 +40,15 @@ internal class ConverterGenerator : ISourceGenerator
         {
             ExecuteInternal(context, receiver);
         }
+        catch (ConversionException e)
+        {
+            // A conversion that can not be written deterministically. The generation is over, and
+            // the error stops the build - which is the point, the pair has to be dealt with by hand.
+            context.ReportDiagnostic(Diagnostic.Create(
+                e.Descriptor,
+                Location.None,
+                e.MessageArguments));
+        }
         catch (Exception e)
         {
             // A generator that throws kills the build with an unspecific error, report it instead.
@@ -99,6 +108,7 @@ internal class ConverterGenerator : ISourceGenerator
         return new IConverterBodyRule[]
         {
             new ToStringBodyRule(),
+            new EnumBodyRule(),
             new ObjectInitializerBodyRule(valueRules)
         };
     }
