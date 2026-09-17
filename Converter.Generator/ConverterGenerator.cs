@@ -1,8 +1,11 @@
 using System;
-using Majipro.Converter.Generator.Analysis;
+using System.Collections.Generic;
+using Majipro.Converter.Generator.Conversions;
 using Majipro.Converter.Generator.Diagnostics;
 using Majipro.Converter.Generator.Generating;
 using Majipro.Converter.Generator.Receivers;
+using Majipro.Converter.Generator.Rules;
+using Majipro.Converter.Generator.Sources;
 using Microsoft.CodeAnalysis;
 
 namespace Majipro.Converter.Generator;
@@ -13,6 +16,11 @@ namespace Majipro.Converter.Generator;
 /// Generated converters are plain public classes, so <c>DiCompositor.AddConverting</c> picks them up
 /// by its regular assembly scan - no generated wiring is needed.
 /// </summary>
+/// <remarks>
+/// There is no analysis pass and no model of a converter: the pairs are travelled one by one and
+/// each one is written out on the spot, which is also when the pairs that converter needs are
+/// requested. The queue is enumerated lazily, so those arrive in the same pass.
+/// </remarks>
 [Generator]
 internal class ConverterGenerator : ISourceGenerator
 {
@@ -45,11 +53,53 @@ internal class ConverterGenerator : ISourceGenerator
 
     private static void ExecuteInternal(GeneratorExecutionContext context, ConvertCallsSyntaxReceiver receiver)
     {
-        var conversions = new ConversionAnalyzer(context.Compilation).Analyze(receiver.ConvertCalls);
+        var semantics = new ConversionSemantics(context.Compilation);
 
-        foreach (var conversion in conversions)
+        if (semantics.IsAvailable == false)
         {
-            context.AddSource(conversion.FileName, ConverterSourceBuilder.Build(conversion));
+            // Majipro.Converter.Abstrations is not referenced, there is nothing to generate.
+            return;
         }
+
+        var queue = new ConversionQueue();
+        var emitter = new ConverterEmitter(semantics, queue, GetBodyRules());
+
+        foreach (var implemented in new ImplementedConverters(semantics).Pairs())
+        {
+            queue.Suppress(implemented);
+        }
+
+        foreach (var requested in new ConvertCallSites(semantics, receiver.ConvertCalls).Pairs())
+        {
+            queue.Request(requested);
+        }
+
+        foreach (var pair in queue.Travel())
+        {
+            foreach (var source in emitter.Emit(pair))
+            {
+                context.AddSource(source.FileName, source.Text);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The composition root. Order is meaning: the first rule that knows how to write the
+    /// conversion, or the value of one property, is the one that writes it.
+    /// </summary>
+    private static IReadOnlyList<IConverterBodyRule> GetBodyRules()
+    {
+        var valueRules = new IPropertyValueRule[]
+        {
+            new DirectValueRule(),
+            new ConvertedValueRule(),
+            new CollectionValueRule()
+        };
+
+        return new IConverterBodyRule[]
+        {
+            new ToStringBodyRule(),
+            new ObjectInitializerBodyRule(valueRules)
+        };
     }
 }
