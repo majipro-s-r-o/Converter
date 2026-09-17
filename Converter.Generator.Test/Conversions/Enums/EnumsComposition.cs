@@ -19,11 +19,4 @@ public class EnumsComposition : TestCompositionBase
     {
         return convertingService.Convert<EnumsTestCase.From, EnumsTestCase.To>(from);
     }
-
-    public EnumsTestCase.UnmappedTo ConvertBetweenEnumTypes(
-        IConvertingService convertingService,
-        EnumsTestCase.UnmappedFrom from)
-    {
-        return convertingService.Convert<EnumsTestCase.UnmappedFrom, EnumsTestCase.UnmappedTo>(from);
-    }
 }

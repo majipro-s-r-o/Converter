@@ -25,4 +25,17 @@ internal static class ConverterDiagnostics
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// A target property nothing can fill: either the source has no property of that name, or it
+    /// has one no value rule knows what to do with. Leaving it at its default would be a converter
+    /// that silently loses a part of the target, so the generator writes nothing and says so.
+    /// </summary>
+    internal static readonly DiagnosticDescriptor PropertyWithoutCounterpart = new DiagnosticDescriptor(
+        "MC0003",
+        "Converter can not be generated",
+        "Can not convert '{0}' to '{1}', there is no value in '{0}' for these properties of '{1}': {2}",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

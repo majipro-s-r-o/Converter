@@ -13,14 +13,6 @@ public class DifferentSourcesAndTargetsComposition : TestCompositionBase
             .Convert<DifferentSourcesAndTargetsTestCase.MoreProperties, DifferentSourcesAndTargetsTestCase.FewerProperties>(from);
     }
 
-    public DifferentSourcesAndTargetsTestCase.WithId ConvertToWithId(
-        IConvertingService convertingService,
-        DifferentSourcesAndTargetsTestCase.WithoutId from)
-    {
-        return convertingService
-            .Convert<DifferentSourcesAndTargetsTestCase.WithoutId, DifferentSourcesAndTargetsTestCase.WithId>(from);
-    }
-
     public DifferentSourcesAndTargetsTestCase.WithoutCompany ConvertToWithoutCompany(
         IConvertingService convertingService,
         DifferentSourcesAndTargetsTestCase.WithCompany from)

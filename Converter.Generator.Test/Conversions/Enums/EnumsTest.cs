@@ -13,7 +13,7 @@ public class EnumsTest : ConversionTestBase<EnumsComposition>
     {
         AssertGeneratedWithoutDiagnostics();
 
-        Assert.AreEqual(4, GeneratedSources.Count, "One converter is expected for each of the four conversions.");
+        Assert.AreEqual(3, GeneratedSources.Count, "One converter is expected for each of the three conversions.");
     }
 
     [TestMethod]
@@ -80,25 +80,5 @@ public class EnumsTest : ConversionTestBase<EnumsComposition>
 
         Assert.IsNotNull(to);
         Assert.AreEqual(EnumsTestCase.Status.Closed, to.NullableStatus);
-    }
-
-    /// <summary>
-    /// The boundary that makes the enum converters in the consuming projects hand written: the
-    /// property is dropped silently, so the generator can not be pointed at a pair like this.
-    /// </summary>
-    [TestMethod]
-    public void WhenTheTwoSidesAreDifferentEnumTypesThenThePropertyIsLeftUnmapped()
-    {
-        AssertGeneratedWithoutDiagnostics();
-
-        var from = new EnumsTestCase.UnmappedFrom
-        {
-            Status = EnumsTestCase.Status.Active
-        };
-
-        var to = GetConvertingService().Convert<EnumsTestCase.UnmappedFrom, EnumsTestCase.UnmappedTo>(from);
-
-        Assert.IsNotNull(to);
-        Assert.AreEqual(EnumsTestCase.StatusEntity.Unknown, to.Status);
     }
 }

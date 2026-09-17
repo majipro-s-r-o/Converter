@@ -44,25 +44,6 @@ public class DifferentSourcesAndTargetsTestCase
     }
 
     /// <summary>
-    /// The target knows more than the source, <see cref="WithId.Id"/> has nothing to come from.
-    /// </summary>
-    public class WithoutId
-    {
-        public string FirstName { get; set; }
-
-        public string LastName { get; set; }
-    }
-
-    public class WithId
-    {
-        public Guid Id { get; set; }
-
-        public string FirstName { get; set; }
-
-        public string LastName { get; set; }
-    }
-
-    /// <summary>
     /// Both sides know something the other one does not.
     /// </summary>
     public class WithCompany

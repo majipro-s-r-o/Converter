@@ -15,7 +15,7 @@ public class DifferentSourcesAndTargetsTest : ConversionTestBase<DifferentSource
     {
         AssertGeneratedWithoutDiagnostics();
 
-        Assert.AreEqual(3, GeneratedSources.Count, "One converter is expected for each of the three conversions.");
+        Assert.AreEqual(2, GeneratedSources.Count, "One converter is expected for each of the two conversions.");
     }
 
     [TestMethod]
@@ -47,27 +47,6 @@ public class DifferentSourcesAndTargetsTest : ConversionTestBase<DifferentSource
         Assert.AreEqual(from.Byte, to.Byte);
         Assert.AreEqual(from.Bool, to.Bool);
         Assert.AreEqual(from.String, to.String);
-    }
-
-    [TestMethod]
-    public void WhenTargetHasMorePropertiesThenTheOnesWithoutSourceStayDefault()
-    {
-        AssertGeneratedWithoutDiagnostics();
-
-        var from = new DifferentSourcesAndTargetsTestCase.WithoutId
-        {
-            FirstName = "John",
-            LastName = "Smith"
-        };
-
-        var to = GetConvertingService()
-            .Convert<DifferentSourcesAndTargetsTestCase.WithoutId, DifferentSourcesAndTargetsTestCase.WithId>(from);
-
-        Assert.IsNotNull(to);
-
-        Assert.AreEqual(from.FirstName, to.FirstName);
-        Assert.AreEqual(from.LastName, to.LastName);
-        Assert.AreEqual(Guid.Empty, to.Id);
     }
 
     [TestMethod]
