@@ -92,9 +92,26 @@ Add the class under `Converter/Converters/`, register it in `DiCompositorConvert
 
 The generator has a `PrivateAssets="all"` project reference to `Converter.Abstrations` and resolves the symbols it looks for through `compilation.GetTypeByMetadataName(typeof(IConvertingService).FullName)` (and `typeof(IConverter<,>)`, `typeof(IAsyncConverter<,>)`), so renaming or moving an interface breaks the generator's build instead of silently generating nothing.
 
-Pipeline: `ConvertCallsSyntaxReceiver` collects every `x.Method<A, B>(...)` invocation → `Analysis/ConversionAnalyzer` keeps those that bind to a method on `Majipro.Converter.IConvertingService`, dedupes the `From -> To` pairs, drops pairs somebody already implemented by hand (otherwise `DiCompositionValidator` would throw about duplicates) and pairs it cannot map, and matches properties → `Generating/ConverterSourceBuilder` builds the class as a Roslyn syntax tree (`SyntaxFactory`, rendered by `NormalizeWhitespace()`, like the reference project) with fully qualified type names, in namespace `Majipro.Converter.Generated`. Anything thrown is reported as diagnostic `MC0001` instead of killing the build.
+Pipeline: `ConvertCallsSyntaxReceiver` collects every `x.Method<A, B>(...)` invocation → `Analysis/ConversionAnalyzer` keeps those that bind to a method on `Majipro.Converter.Abstrations.IConvertingService` and turns them into a **queue** of `From -> To` pairs, drops pairs somebody already implemented by hand (otherwise `DiCompositionValidator` would throw about duplicates) and pairs it cannot map, and matches properties — a property that needs a converter of its own pushes that pair back onto the queue, so one call site can produce a whole tree of converters → `Generating/ConverterSourceBuilder` builds each class as a Roslyn syntax tree (`SyntaxFactory`, rendered by `NormalizeWhitespace()`, like the reference project) with fully qualified type names, in namespace `Majipro.Converter.Generated`. Anything thrown is reported as diagnostic `MC0001` instead of killing the build.
 
-Current mapping rule is deliberately dumb: **same property name + exactly the same property type**, public getter on the source, public setter (or `init`) on the target, base type properties included. Not handled yet (each is a place to extend): type mismatches needing a nested converter, collections, `ConvertAsync`/reference-converter call sites (a plain `IConverter` gets generated for them), `ConvertExplicitly` extension methods, generic and positional-record targets, and diagnostics for target properties that stay unmapped.
+The pair is marked as handled *before* its converter is built, which is also what stops a type that contains itself from looping forever.
+
+Properties are matched by **name**, with a public getter on the source and a public setter (or `init`) on the target, base type properties included. The value then reaches the target one of three ways, in this order (`Analysis/PropertyMappingKind`):
+
+| Kind | When | Emitted as |
+| --- | --- | --- |
+| `Direct` | `CSharpCompilation.ClassifyConversion(source, target).IsImplicit` — identity, `Guid -> Guid?`, a differing nullable annotation, an implicit numeric or reference conversion | `To = from.Prop` |
+| `Converted` | both sides are mappable types | `To = _convertingService.Convert<A, B>(from.Prop)`, and `A -> B` is queued |
+| `Collection` | the source is an `IEnumerable<A>` (`string` excluded) and the target is one of `IEnumerable<>`, `ICollection<>`, `IList<>`, `IReadOnlyCollection<>`, `IReadOnlyList<>`, `List<>` of `B`, where `A` and `B` are the same type or a mappable pair — merely assignable items (`int` into `long`) are **not** enough, the per item `Convert<A, B>` would compile and then throw about a missing conversion | `To = from.Prop == null ? null : new List<B>(_convertingService.Convert<A, B>((IEnumerable<A>)from.Prop))`, and `A -> B` is queued |
+
+Anything else is left unmapped. Two shapes are handled outside property mapping: a **`string` target** becomes `System.Convert.ToString(from)` (a string can never be built by an object initializer), and a **`Nullable<T>`** on either side is unwrapped — properties are read through `from.Value`, the object initializer creates the plain `T`, and the converter signature keeps the nullable type. A conversion with *no* mapped properties still gets a converter that returns an empty instance.
+
+A converter that needs `Converted` or `Collection` gets a constructor taking `IConvertingService`; `DiCompositor` registers it like any other converter and the DI container injects it.
+
+Not handled yet (each is a place to extend): `ConvertAsync`/reference-converter call sites (a plain `IConverter` gets generated for them), `ConvertExplicitly` extension methods, sets, dictionaries and arrays as property types, generic and positional-record targets, and diagnostics for target properties that stay unmapped.
+
+### Generator test cases
+`Converter.Generator.Test/Tests/` mirrors the reference project's `Generator.Tests/TestCases/Basic`, one folder per case: `PropertyOfTheSameType` (the baseline), `DifferentSourcesAndTargets` (asymmetric property sets), `ObjectNesting` (nested converters and collection properties), `AccessModifiers` (private, `init` and get only properties), `FileScopedNamespace` (types declared straight in a file scoped namespace instead of nested in a test case class), `Structures` (structs, `Guid -> Guid?`, differing nullable annotations) and `NullableTypes` (`Nullable<T>` on either side of the call site and `string` targets).
 
 ### Adding a generator test case
 Under `Converter.Generator.Test/Tests/<Case>/` add three files:
@@ -108,8 +125,7 @@ Under `Converter.Generator.Test/Tests/<Case>/` add three files:
 
 ## Current state of the working tree
 
-The solution builds clean and both suites pass (136 + 5). Open items:
+The solution builds clean and both suites pass (136 + 32). Open items:
 - `Converter.Tests/Tests/Converters/StringToDateTimeOffsetConverterTests.cs` warns MSTEST0042 — two identical `DataRow` attributes (indices 3 and 4), most likely a copy/paste error hiding a case that was meant to be covered.
 - `Converter.Generator` targets net10.0, so it cannot be loaded as an analyzer by the compiler yet — it only runs in-process from the tests. Packing it means moving it (and `Converter.Abstrations`, which it now references) to netstandard2.0 and adding the analyzer packaging bits: both dlls into `analyzers/dotnet/cs` (see the reference project's csproj). `Converter.Abstrations` has no package references, so those two dlls are all the analyzer context needs.
 - `dotnet pack` on the solution currently produces three packages — `Majipro.Converter`, `Majipro.Converter.Abstrations` (a proper dependency of the first one) and `Majipro.Converter.Generator`. The last one is a plain `lib/net10.0` package that does nothing when installed, and `.github/workflows/main.yaml` pushes `artifacts/*.nupkg` on a `v*` tag, so it would land on nuget.org as is. Set `IsPackable=false` on the generator until the analyzer packaging is done.
-- `Converter.Generator.Test/Test1.cs` is leftover `dotnet new mstest` scaffolding.

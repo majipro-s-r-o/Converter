@@ -44,9 +44,41 @@ internal static class TypeSymbolExtensions
         return property.GetMethod != null && property.GetMethod.DeclaredAccessibility == Accessibility.Public;
     }
 
+    /// <summary>
+    /// Writable by an object initializer, so an <c>init</c> only setter counts as well.
+    /// </summary>
     internal static bool IsWritable(this IPropertySymbol property)
     {
         return property.SetMethod != null && property.SetMethod.DeclaredAccessibility == Accessibility.Public;
+    }
+
+    /// <summary>
+    /// <c>T</c> of a <see cref="System.Nullable{T}"/>, <c>null</c> for anything else.
+    /// </summary>
+    internal static ITypeSymbol? GetNullableUnderlyingType(this ITypeSymbol type)
+    {
+        return type is INamedTypeSymbol named &&
+               named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
+               named.TypeArguments.Length == 1
+            ? named.TypeArguments[0]
+            : null;
+    }
+
+    /// <summary>
+    /// The type itself, or <c>T</c> when the type is a <see cref="System.Nullable{T}"/>. This is the
+    /// type whose properties are mapped, while the nullable type is what the converter signature says.
+    /// </summary>
+    internal static ITypeSymbol GetUnderlyingType(this ITypeSymbol type)
+    {
+        return type.GetNullableUnderlyingType() ?? type;
+    }
+
+    /// <summary>
+    /// A value that can carry a <c>null</c>: a reference type or a <see cref="System.Nullable{T}"/>.
+    /// </summary>
+    internal static bool CanBeNull(this ITypeSymbol type)
+    {
+        return type.IsValueType == false || type.GetNullableUnderlyingType() != null;
     }
 
     /// <summary>
