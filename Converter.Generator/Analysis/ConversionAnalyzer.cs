@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Majipro.Converter.Abstrations;
+using Majipro.Converter.Generator.Conversions;
 using Majipro.Converter.Generator.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -55,20 +56,22 @@ internal sealed class ConversionAnalyzer
             .ToList();
     }
 
-    public IReadOnlyList<ConversionInfo> Analyze(IReadOnlyList<InvocationExpressionSyntax> convertCalls)
+    public IEnumerable<ConversionInfo> Analyze(IReadOnlyList<InvocationExpressionSyntax> convertCalls)
     {
-        var result = new List<ConversionInfo>();
-
         if (_convertingService == null || _converter == null)
         {
             // Majipro.Converter.Abstrations is not referenced, there is nothing to generate.
-            return result;
+            yield break;
         }
+
+        var queue = new ConversionQueue();
 
         // Conversions somebody already implemented by hand win, generating them again would make
         // DiCompositionValidator throw about two implementations of the same From -> To pair.
-        var handled = GetAlreadyImplementedConversions();
-        var pending = new Queue<ConversionRequest>();
+        foreach (var implemented in GetAlreadyImplementedConversions())
+        {
+            queue.Suppress(implemented);
+        }
 
         foreach (var convertCall in convertCalls)
         {
@@ -76,32 +79,22 @@ internal sealed class ConversionAnalyzer
 
             if (requested != null)
             {
-                pending.Enqueue(requested);
+                queue.Request(requested.Value);
             }
         }
 
-        while (pending.Count > 0)
+        foreach (var pair in queue.Travel())
         {
-            var request = pending.Dequeue();
-
-            // Marking the pair before it is built also stops a type that contains itself.
-            if (handled.Add(request.Key) == false)
-            {
-                continue;
-            }
-
-            var conversion = GetConversion(request, pending, _converter);
+            var conversion = GetConversion(pair, queue, _converter);
 
             if (conversion != null)
             {
-                result.Add(conversion);
+                yield return conversion;
             }
         }
-
-        return result;
     }
 
-    private ConversionRequest? GetRequestedConversion(InvocationExpressionSyntax convertCall)
+    private ConversionPair? GetRequestedConversion(InvocationExpressionSyntax convertCall)
     {
         if (GetSemanticModel(convertCall.SyntaxTree).GetSymbolInfo(convertCall).Symbol is not IMethodSymbol method)
         {
@@ -119,19 +112,19 @@ internal sealed class ConversionAnalyzer
             return null;
         }
 
-        return new ConversionRequest(method.TypeArguments[0], method.TypeArguments[1]);
+        return new ConversionPair(method.TypeArguments[0], method.TypeArguments[1]);
     }
 
     private ConversionInfo? GetConversion(
-        ConversionRequest request,
-        Queue<ConversionRequest> pending,
+        ConversionPair pair,
+        ConversionQueue queue,
         INamedTypeSymbol converter)
     {
-        var from = request.From;
-        var to = request.To;
+        var from = pair.From;
+        var to = pair.To;
 
         // Same type conversions are handled by ConvertingService itself.
-        if (SymbolEqualityComparer.Default.Equals(from, to))
+        if (pair.IsIdentity)
         {
             return null;
         }
@@ -155,7 +148,7 @@ internal sealed class ConversionAnalyzer
             return null;
         }
 
-        var properties = GetPropertyMappings(fromValue, toValue, pending);
+        var properties = GetPropertyMappings(fromValue, toValue, queue);
 
         return ConversionInfo.FromProperties(from, to, converter.Construct(from, to), properties);
     }
@@ -167,7 +160,7 @@ internal sealed class ConversionAnalyzer
     private IReadOnlyList<PropertyMapping> GetPropertyMappings(
         ITypeSymbol from,
         ITypeSymbol to,
-        Queue<ConversionRequest> pending)
+        ConversionQueue queue)
     {
         var sources = from.GetInstanceProperties()
             .Where(p => p.IsReadable())
@@ -182,7 +175,7 @@ internal sealed class ConversionAnalyzer
                 continue;
             }
 
-            var mapping = GetPropertyMapping(source, target, pending);
+            var mapping = GetPropertyMapping(source, target, queue);
 
             if (mapping != null)
             {
@@ -196,7 +189,7 @@ internal sealed class ConversionAnalyzer
     private PropertyMapping? GetPropertyMapping(
         IPropertySymbol source,
         IPropertySymbol target,
-        Queue<ConversionRequest> pending)
+        ConversionQueue queue)
     {
         if (IsAssignable(source.Type, target.Type))
         {
@@ -206,18 +199,18 @@ internal sealed class ConversionAnalyzer
         if (source.Type.GetUnderlyingType().IsMappableSource() &&
             target.Type.GetUnderlyingType().IsMappableTarget())
         {
-            pending.Enqueue(new ConversionRequest(source.Type, target.Type));
+            queue.Request(source.Type, target.Type);
 
             return PropertyMapping.Converted(source, target);
         }
 
-        return GetCollectionPropertyMapping(source, target, pending);
+        return GetCollectionPropertyMapping(source, target, queue);
     }
 
     private PropertyMapping? GetCollectionPropertyMapping(
         IPropertySymbol source,
         IPropertySymbol target,
-        Queue<ConversionRequest> pending)
+        ConversionQueue queue)
     {
         var sourceItem = GetEnumeratedType(source.Type);
         var targetItem = GetListItemType(target.Type);
@@ -238,7 +231,7 @@ internal sealed class ConversionAnalyzer
                 return null;
             }
 
-            pending.Enqueue(new ConversionRequest(sourceItem, targetItem));
+            queue.Request(sourceItem, targetItem);
         }
 
         return PropertyMapping.Collection(source, target, sourceItem, targetItem);
@@ -302,10 +295,8 @@ internal sealed class ConversionAnalyzer
             : null;
     }
 
-    private HashSet<string> GetAlreadyImplementedConversions()
+    private IEnumerable<ConversionPair> GetAlreadyImplementedConversions()
     {
-        var result = new HashSet<string>();
-
         foreach (var type in GetTypes(_compilation.Assembly.GlobalNamespace))
         {
             foreach (var iface in type.AllInterfaces)
@@ -323,11 +314,9 @@ internal sealed class ConversionAnalyzer
                     continue;
                 }
 
-                result.Add(new ConversionRequest(iface.TypeArguments[0], iface.TypeArguments[1]).Key);
+                yield return new ConversionPair(iface.TypeArguments[0], iface.TypeArguments[1]);
             }
         }
-
-        return result;
     }
 
     private static IEnumerable<INamedTypeSymbol> GetTypes(INamespaceOrTypeSymbol namespaceOrType)
