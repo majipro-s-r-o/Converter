@@ -101,6 +101,21 @@ public abstract class ConversionTestBase<TComposition>
         return GetService<IConverter<TFrom, TTo>>();
     }
 
+    protected IReferenceConverter<TFrom, TTo> GetReferenceConverter<TFrom, TTo>()
+    {
+        return GetService<IReferenceConverter<TFrom, TTo>>();
+    }
+
+    /// <summary>
+    /// The reference converter for the pair, or <c>null</c> when there is none. Asking the container
+    /// is the only way to ask, which is the point: this is exactly what a consumer of the generated
+    /// code sees.
+    /// </summary>
+    protected IReferenceConverter<TFrom, TTo> FindReferenceConverter<TFrom, TTo>()
+    {
+        return ServiceProvider.GetService<IReferenceConverter<TFrom, TTo>>();
+    }
+
     protected IConvertingService GetConvertingService()
     {
         return GetService<IConvertingService>();

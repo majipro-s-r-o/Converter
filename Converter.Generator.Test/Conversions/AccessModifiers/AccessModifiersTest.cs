@@ -90,4 +90,49 @@ public class AccessModifiersTest : ConversionTestBase<AccessModifiersComposition
         Assert.IsNotNull(to);
         Assert.IsNull(to.PublicProperty);
     }
+
+    [TestMethod]
+    public void WhenTheTargetPropertyIsInitOnlyThenThereIsNoReferenceConverter()
+    {
+        AssertGeneratedWithoutDiagnostics();
+
+        var converter = FindReferenceConverter<AccessModifiersTestCase.InitPropertyFrom,
+            AccessModifiersTestCase.InitPropertyTo>();
+
+        Assert.IsNull(
+            converter,
+            "An init only property is written while the target is created and never again.");
+    }
+
+    [TestMethod]
+    public void WhenTheTargetPropertyHasAnOrdinarySetterThenThereIsAReferenceConverter()
+    {
+        AssertGeneratedWithoutDiagnostics();
+
+        var from = new AccessModifiersTestCase.PublicPropertyFrom
+        {
+            PublicProperty = "hello"
+        };
+
+        var to = new AccessModifiersTestCase.PublicPropertyTo();
+
+        var converted = GetReferenceConverter<AccessModifiersTestCase.PublicPropertyFrom,
+            AccessModifiersTestCase.PublicPropertyTo>().Convert(from, to);
+
+        Assert.AreSame(to, converted);
+        Assert.AreEqual(from.PublicProperty, to.PublicProperty);
+    }
+
+    [TestMethod]
+    public void WhenThereIsNothingToFillThenTheTargetComesBackUntouched()
+    {
+        AssertGeneratedWithoutDiagnostics();
+
+        var to = new AccessModifiersTestCase.GetOnlyPropertyTo();
+
+        var converted = GetReferenceConverter<AccessModifiersTestCase.GetOnlyPropertyFrom,
+            AccessModifiersTestCase.GetOnlyPropertyTo>().Convert(new AccessModifiersTestCase.GetOnlyPropertyFrom(), to);
+
+        Assert.AreSame(to, converted, "A target with nothing to fill is still a target that can be handed in.");
+    }
 }

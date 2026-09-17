@@ -24,10 +24,13 @@ namespace Majipro.Converter.Generator.Rules;
 /// <see cref="ConversionException"/>, which stops the generation and fails the build on
 /// <see cref="ConverterDiagnostics.EnumMemberWithoutCounterpart"/>. The other direction is fine:
 /// target members nothing maps to are simply never returned.
+///
+/// An enum the caller already has is a value, not an instance to fill, so this conversion writes no
+/// fill and the generated class stays a plain <c>IConverter</c>.
 /// </remarks>
 internal sealed class EnumBodyRule : IConverterBodyRule
 {
-    public IEnumerable<StatementSyntax> Body(ConverterContext context)
+    public IEnumerable<ConverterBody> Body(ConverterContext context)
     {
         if (context.Source.TypeKind != TypeKind.Enum ||
             context.Target.TypeKind != TypeKind.Enum ||
@@ -37,7 +40,7 @@ internal sealed class EnumBodyRule : IConverterBodyRule
         }
 
         // Deciding is over, everything below happens because this rule won.
-        yield return GetSwitch(context);
+        yield return new ConverterBody(GetSwitch(context));
     }
 
     private static StatementSyntax GetSwitch(ConverterContext context)

@@ -100,4 +100,35 @@ public class StructuresTest : ConversionTestBase<StructuresComposition>
         Assert.IsNotNull(to);
         Assert.AreEqual(from.Id, to.Id);
     }
+
+    [TestMethod]
+    public void WhenTheTargetIsAStructureThenThereIsNoReferenceConverter()
+    {
+        AssertGeneratedWithoutDiagnostics();
+
+        var converter = FindReferenceConverter<StructuresTestCase.ClassSource, StructuresTestCase.StructTarget>();
+
+        Assert.IsNull(
+            converter,
+            "A structure handed to a method is a copy of it, so there is no instance of the caller's to fill.");
+    }
+
+    [TestMethod]
+    public void WhenTheTargetIsAClassThenThereIsAReferenceConverter()
+    {
+        AssertGeneratedWithoutDiagnostics();
+
+        var from = new StructuresTestCase.StructSource
+        {
+            Id = Guid.NewGuid()
+        };
+
+        var to = new StructuresTestCase.ClassTarget();
+
+        var converted = GetReferenceConverter<StructuresTestCase.StructSource, StructuresTestCase.ClassTarget>()
+            .Convert(from, to);
+
+        Assert.AreSame(to, converted);
+        Assert.AreEqual(from.Id, to.Id);
+    }
 }

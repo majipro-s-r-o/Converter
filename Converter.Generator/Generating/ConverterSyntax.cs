@@ -19,6 +19,7 @@ internal static class ConverterSyntax
 
     internal const string ConvertMethodName = nameof(IConverter<object, object>.Convert);
     internal const string FromParameterName = "from";
+    internal const string ToParameterName = "to";
     internal const string ConvertingServiceParameterName = "convertingService";
     internal const string ConvertingServiceFieldName = "_" + ConvertingServiceParameterName;
 
@@ -40,6 +41,12 @@ internal static class ConverterSyntax
         return IdentifierName(FromIdentifier());
     }
 
+    /// <summary>The target a reference converter was handed, which is a plain identifier.</summary>
+    internal static ExpressionSyntax To()
+    {
+        return IdentifierName(ToParameterName);
+    }
+
     internal static ExpressionSyntax Member(ExpressionSyntax instance, string name)
     {
         return MemberAccessExpression(
@@ -51,6 +58,13 @@ internal static class ConverterSyntax
     internal static ExpressionSyntax Null()
     {
         return LiteralExpression(SyntaxKind.NullLiteralExpression);
+    }
+
+    internal static ExpressionSyntax Default()
+    {
+        return LiteralExpression(
+            SyntaxKind.DefaultLiteralExpression,
+            Token(SyntaxKind.DefaultKeyword));
     }
 
     internal static ExpressionSyntax IsNull(ExpressionSyntax value)

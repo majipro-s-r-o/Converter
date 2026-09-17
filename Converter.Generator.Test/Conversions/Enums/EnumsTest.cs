@@ -81,4 +81,14 @@ public class EnumsTest : ConversionTestBase<EnumsComposition>
         Assert.IsNotNull(to);
         Assert.AreEqual(EnumsTestCase.Status.Closed, to.NullableStatus);
     }
+
+    [TestMethod]
+    public void WhenTheTargetIsAStringThenThereIsNoReferenceConverter()
+    {
+        AssertGeneratedWithoutDiagnostics();
+
+        var converter = FindReferenceConverter<EnumsTestCase.Status, string>();
+
+        Assert.IsNull(converter, "A string is a value, not an instance somebody holds and can have filled.");
+    }
 }

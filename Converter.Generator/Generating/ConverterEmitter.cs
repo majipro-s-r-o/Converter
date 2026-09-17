@@ -15,7 +15,10 @@ namespace Majipro.Converter.Generator.Generating;
 
 /// <summary>
 /// Writes the converter for one pair, or nothing when no rule knows how. The class around the body
-/// is decided by what writing the body turned out to need, not by anything asked beforehand.
+/// is decided by what writing the body turned out to need, not by anything asked beforehand - the
+/// converting service it takes, and the interface it implements: a converter that turned out to be
+/// able to fill a target somebody already holds is written as an <c>IReferenceConverter</c>, which
+/// is two conversions in one class, because that interface extends <c>IConverter</c>.
 /// </summary>
 internal sealed class ConverterEmitter
 {
@@ -53,7 +56,7 @@ internal sealed class ConverterEmitter
         yield return new GeneratedSource(context.FileName, Render(context, body));
     }
 
-    private SourceText Render(ConverterContext context, StatementSyntax body)
+    private SourceText Render(ConverterContext context, ConverterBody body)
     {
         var sourceCode = GetCompilationUnit(context, body)
             .NormalizeWhitespace()
@@ -64,7 +67,7 @@ internal sealed class ConverterEmitter
         return SourceText.From(sourceCode, Encoding.UTF8);
     }
 
-    private CompilationUnitSyntax GetCompilationUnit(ConverterContext context, StatementSyntax body)
+    private CompilationUnitSyntax GetCompilationUnit(ConverterContext context, ConverterBody body)
     {
         return CompilationUnit()
             .WithMembers(
@@ -90,11 +93,8 @@ internal sealed class ConverterEmitter
                     true)));
     }
 
-    private ClassDeclarationSyntax GetConverterClass(ConverterContext context, StatementSyntax body)
+    private ClassDeclarationSyntax GetConverterClass(ConverterContext context, ConverterBody body)
     {
-        // The method is built first on purpose: whether the converting service is needed is known
-        // only once the body has been written.
-        var convert = GetConvertMethod(context, body);
         var members = new List<MemberDeclarationSyntax>();
 
         if (context.RequiresConvertingService)
@@ -103,7 +103,12 @@ internal sealed class ConverterEmitter
             members.Add(GetConstructor(context));
         }
 
-        members.Add(convert);
+        members.Add(GetCreateMethod(context, body.Create));
+
+        if (body.Fill != null)
+        {
+            members.Add(GetFillMethod(context, body.Fill));
+        }
 
         return ClassDeclaration(context.ClassName)
             .WithModifiers(
@@ -114,46 +119,82 @@ internal sealed class ConverterEmitter
                 BaseList(
                     SingletonSeparatedList<BaseTypeSyntax>(
                         SimpleBaseType(
-                            ConverterSyntax.TypeName(_semantics.Converter(context.Pair))))))
+                            ConverterSyntax.TypeName(_semantics.Converter(context.Pair, body.Fill != null))))))
             .WithMembers(List(members));
     }
 
-    private static MethodDeclarationSyntax GetConvertMethod(ConverterContext context, StatementSyntax body)
+    /// <summary><c>TTo Convert(TFrom from)</c>, the conversion every generated converter has.</summary>
+    private static MethodDeclarationSyntax GetCreateMethod(ConverterContext context, StatementSyntax body)
     {
         var statements = new List<StatementSyntax>();
 
         // Value types that are not nullable are never null, their converters skip the check.
         if (context.Pair.From.CanBeNull())
         {
-            statements.Add(GetNullCheck());
+            statements.Add(GetNullCheck(ConverterSyntax.Default()));
         }
 
         statements.Add(body);
 
+        return GetConvertMethod(context, statements, GetFromParameter(context));
+    }
+
+    /// <summary>
+    /// <c>TTo Convert(TFrom from, TTo to)</c>, the second conversion, written only for a target that
+    /// can be filled after it exists. The target is returned rather than created, so what the caller
+    /// gets back is the instance it passed in.
+    /// </summary>
+    private static MethodDeclarationSyntax GetFillMethod(
+        ConverterContext context,
+        IReadOnlyList<StatementSyntax> body)
+    {
+        var statements = new List<StatementSyntax>();
+
+        // There is nothing to enhance the target with, so it is handed back the way it came in.
+        if (context.Pair.From.CanBeNull())
+        {
+            statements.Add(GetNullCheck(ConverterSyntax.To()));
+        }
+
+        statements.AddRange(body);
+        statements.Add(ReturnStatement(ConverterSyntax.To()));
+
+        return GetConvertMethod(
+            context,
+            statements,
+            GetFromParameter(context),
+            Parameter(Identifier(ConverterSyntax.ToParameterName))
+                .WithType(ConverterSyntax.TypeName(context.Pair.To)));
+    }
+
+    private static MethodDeclarationSyntax GetConvertMethod(
+        ConverterContext context,
+        IReadOnlyList<StatementSyntax> statements,
+        params ParameterSyntax[] parameters)
+    {
         return MethodDeclaration(
                 ConverterSyntax.TypeName(context.Pair.To),
                 Identifier(ConverterSyntax.ConvertMethodName))
             .WithModifiers(
                 TokenList(
                     Token(SyntaxKind.PublicKeyword)))
-            .WithParameterList(
-                ParameterList(
-                    SingletonSeparatedList(
-                        Parameter(ConverterSyntax.FromIdentifier())
-                            .WithType(ConverterSyntax.TypeName(context.Pair.From)))))
+            .WithParameterList(ParameterList(SeparatedList(parameters)))
             .WithBody(Block(statements));
     }
 
-    private static StatementSyntax GetNullCheck()
+    private static ParameterSyntax GetFromParameter(ConverterContext context)
+    {
+        return Parameter(ConverterSyntax.FromIdentifier())
+            .WithType(ConverterSyntax.TypeName(context.Pair.From));
+    }
+
+    private static StatementSyntax GetNullCheck(ExpressionSyntax result)
     {
         return IfStatement(
             ConverterSyntax.IsNull(ConverterSyntax.From()),
             Block(
                 SingletonList<StatementSyntax>(
-                    ReturnStatement(
-                        LiteralExpression(
-                            SyntaxKind.DefaultLiteralExpression,
-                            Token(SyntaxKind.DefaultKeyword))))));
+                    ReturnStatement(result))));
     }
 
     /// <summary>

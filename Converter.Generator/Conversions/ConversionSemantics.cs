@@ -31,6 +31,8 @@ internal sealed class ConversionSemantics
 
     public INamedTypeSymbol? AsyncConverterInterface { get; }
 
+    public INamedTypeSymbol? ReferenceConverterInterface { get; }
+
     public IAssemblySymbol Assembly => _compilation.Assembly;
 
     /// <summary>
@@ -46,6 +48,7 @@ internal sealed class ConversionSemantics
         ConvertingService = GetTypeSymbol(compilation, typeof(IConvertingService));
         ConverterInterface = GetTypeSymbol(compilation, typeof(IConverter<,>));
         AsyncConverterInterface = GetTypeSymbol(compilation, typeof(IAsyncConverter<,>));
+        ReferenceConverterInterface = GetTypeSymbol(compilation, typeof(IReferenceConverter<,>));
 
         _enumerable = GetTypeSymbol(compilation, typeof(IEnumerable<>));
 
@@ -65,10 +68,20 @@ internal sealed class ConversionSemantics
             .ToList();
     }
 
-    /// <summary><c>IConverter&lt;TFrom, TTo&gt;</c> closed over the pair.</summary>
-    public INamedTypeSymbol Converter(ConversionPair pair)
+    /// <summary>
+    /// The interface the generated class implements, closed over the pair:
+    /// <c>IReferenceConverter&lt;TFrom, TTo&gt;</c> when the converter also fills a target the
+    /// caller already holds, <c>IConverter&lt;TFrom, TTo&gt;</c> when it only creates one. The
+    /// first one extends the second, so there is never a class implementing both by name - which is
+    /// also what keeps DiCompositionValidator from seeing two registrations for one pair.
+    /// </summary>
+    public INamedTypeSymbol Converter(ConversionPair pair, bool reference)
     {
-        return ConverterInterface!.Construct(pair.From, pair.To);
+        var definition = reference && ReferenceConverterInterface != null
+            ? ReferenceConverterInterface
+            : ConverterInterface!;
+
+        return definition.Construct(pair.From, pair.To);
     }
 
     /// <summary>

@@ -66,6 +66,16 @@ internal static class TypeSymbolExtensions
     }
 
     /// <summary>
+    /// Writable on an instance that already exists, which an <c>init</c> only setter is not: it can
+    /// be written while the object is being created and never again. That is the difference between
+    /// a target a converter can create and a target a reference converter can fill.
+    /// </summary>
+    internal static bool IsSettable(this IPropertySymbol property)
+    {
+        return property.IsWritable() && property.SetMethod!.IsInitOnly == false;
+    }
+
+    /// <summary>
     /// <c>T</c> of a <see cref="System.Nullable{T}"/>, <c>null</c> for anything else.
     /// </summary>
     internal static ITypeSymbol? GetNullableUnderlyingType(this ITypeSymbol type)

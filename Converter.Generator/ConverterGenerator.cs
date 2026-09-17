@@ -11,10 +11,12 @@ using Microsoft.CodeAnalysis;
 namespace Majipro.Converter.Generator;
 
 /// <summary>
-/// Generates <see cref="IConverter{TFrom,TTo}"/> implementations for every
+/// Generates converter implementations for every
 /// <c>IConvertingService.Convert&lt;TFrom, TTo&gt;(...)</c> call site found in the compilation.
 /// Generated converters are plain public classes, so <c>DiCompositor.AddConverting</c> picks them up
-/// by its regular assembly scan - no generated wiring is needed.
+/// by its regular assembly scan - no generated wiring is needed. A converter that turned out to be
+/// able to fill a target somebody already holds is written as an
+/// <see cref="IReferenceConverter{TFrom,TTo}"/>, which is both conversions in one class.
 /// </summary>
 /// <remarks>
 /// There is no analysis pass and no model of a converter: the pairs are travelled one by one and
