@@ -38,9 +38,12 @@ internal sealed class ConverterEmitter
 
     public IEnumerable<GeneratedSource> Emit(ConversionPair pair)
     {
-        // Same type conversions are handled by ConvertingService itself, and a type the generated
-        // file can not even name is not a conversion this generator can write.
-        if (pair.IsIdentity || pair.From.GetUnderlyingType().IsVisibleToGeneratedCode() == false)
+        // Same type conversions are handled by ConvertingService itself, and a pair the generated
+        // file can not even name - a type parameter of the call site, something private - is not a
+        // conversion this generator can write.
+        if (pair.IsIdentity ||
+            pair.From.IsVisibleToGeneratedCode() == false ||
+            pair.To.IsVisibleToGeneratedCode() == false)
         {
             yield break;
         }
@@ -113,7 +116,7 @@ internal sealed class ConverterEmitter
         return ClassDeclaration(context.ClassName)
             .WithModifiers(
                 TokenList(
-                    Token(SyntaxKind.PublicKeyword),
+                    Token(GetAccessibility(context.Pair)),
                     Token(SyntaxKind.SealedKeyword)))
             .WithBaseList(
                 BaseList(
@@ -121,6 +124,19 @@ internal sealed class ConverterEmitter
                         SimpleBaseType(
                             ConverterSyntax.TypeName(_semantics.Converter(context.Pair, body.Fill != null))))))
             .WithMembers(List(members));
+    }
+
+    /// <summary>
+    /// As accessible as the pair is. The two <c>Convert</c> methods have to be public - they
+    /// implement an interface - and a public method can neither take nor return a type that is only
+    /// internal, so a converter for such a pair is internal itself. That takes nothing away:
+    /// <c>DiCompositor</c> scans all the types of an assembly, not only the exported ones.
+    /// </summary>
+    private static SyntaxKind GetAccessibility(ConversionPair pair)
+    {
+        return pair.From.IsPublicToGeneratedCode() && pair.To.IsPublicToGeneratedCode()
+            ? SyntaxKind.PublicKeyword
+            : SyntaxKind.InternalKeyword;
     }
 
     /// <summary><c>TTo Convert(TFrom from)</c>, the conversion every generated converter has.</summary>

@@ -141,21 +141,58 @@ internal static class TypeSymbolExtensions
     }
 
     /// <summary>
-    /// The generated converter lives in the same assembly but in its own namespace, so every
-    /// type it touches (including the types it is nested in) has to be at least internal.
+    /// A type a generated file can write down: the generated converter lives in the same assembly
+    /// but in its own file and its own namespace, so every type it names has to be at least
+    /// internal and has to mean the same thing there as it does where it was found. A type
+    /// parameter does not - it only means something inside the declaration it belongs to.
     /// </summary>
     internal static bool IsVisibleToGeneratedCode(this ITypeSymbol type)
     {
-        for (var current = type as INamedTypeSymbol; current != null; current = current.ContainingType)
+        return type.IsAsAccessibleAs(Accessibility.Internal);
+    }
+
+    /// <summary>
+    /// The same question asked of a public declaration. A public class can not take an internal
+    /// type as a parameter or return one, so a converter for such a pair has to be internal
+    /// itself - the compiler refuses the members otherwise.
+    /// </summary>
+    internal static bool IsPublicToGeneratedCode(this ITypeSymbol type)
+    {
+        return type.IsAsAccessibleAs(Accessibility.Public);
+    }
+
+    /// <summary>
+    /// The type, everything it is built out of and everything it is nested in, all of them declared
+    /// at least as accessible as <see cref="required"/>.
+    /// </summary>
+    private static bool IsAsAccessibleAs(this ITypeSymbol type, Accessibility required)
+    {
+        if (type is IArrayTypeSymbol array)
         {
-            if (current.DeclaredAccessibility != Accessibility.Public &&
-                current.DeclaredAccessibility != Accessibility.Internal)
+            return array.ElementType.IsAsAccessibleAs(required);
+        }
+
+        if (type is not INamedTypeSymbol named)
+        {
+            // A type parameter, a pointer, dynamic: not a name a standalone file can carry.
+            return false;
+        }
+
+        for (var current = named; current != null; current = current.ContainingType)
+        {
+            if (current.DeclaredAccessibility.IsAtLeast(required) == false)
             {
                 return false;
             }
         }
 
-        return true;
+        return named.TypeArguments.All(a => a.IsAsAccessibleAs(required));
+    }
+
+    private static bool IsAtLeast(this Accessibility declared, Accessibility required)
+    {
+        return declared == Accessibility.Public ||
+               (declared == Accessibility.Internal && required == Accessibility.Internal);
     }
 
     internal static string ToFullyQualifiedName(this ITypeSymbol type)

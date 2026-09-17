@@ -5,6 +5,11 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <NoWarn>$(NoWarn);RS2008</NoWarn>
+        <!-- Packing this as it is would put a lib/net10.0 package on nuget.org that does nothing
+             when installed - a generator has to be packed into analyzers/dotnet/cs, and this one
+             does not target a framework the compiler can load it from yet. The release workflow
+             pushes artifacts/*.nupkg, so the package has to not exist rather than not be pushed. -->
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
