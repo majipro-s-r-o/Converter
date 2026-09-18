@@ -11,7 +11,7 @@ dotnet test                                             # all test projects
 dotnet test Converter.Tests/Converter.Tests.csproj      # one project
 dotnet test --filter "FullyQualifiedName~ConversionTests"                 # one class
 dotnet test --filter "FullyQualifiedName~WhenConvertingBetweenTwoObjects" # one test
-dotnet pack --configuration Release /p:Version=1.2.3 --output artifacts   # what CI does on a v* tag
+dotnet pack --configuration Release /p:Version=1.2.3 --output artifacts   # the one shipped package
 ```
 
 There is no linter/formatter step; MSTest analyzers (MSTEST####) and Roslyn warnings surface during build.
@@ -20,13 +20,13 @@ There is no linter/formatter step; MSTest analyzers (MSTEST####) and Roslyn warn
 
 | Project | TFM | Purpose |
 | --- | --- | --- |
-| `Converter.Abstrations/` | netstandard2.1 | The four converter interfaces + `IConvertingService`, packed as NuGet `Majipro.Converter.Abstrations`. Shared by the library **and** the generator, so neither side identifies them by name. Deliberately dependency free — `IConverterOptions` stays in `Converter/` because it exposes `ServiceLifetime`, which would drag `Microsoft.Extensions.DependencyInjection.Abstractions` into the generator's analyzer context |
-| `Converter/` | netstandard2.1 | The shipped library, packed as NuGet `Majipro.Converter` (`GeneratePackageOnBuild`) |
+| `Converter.Abstrations/` | netstandard2.0 **and** netstandard2.1 | The four converter interfaces + `IConvertingService`. Shared by the library **and** the generator, so neither side identifies them by name. Two assets because it has two homes, see *Packaging*. Deliberately dependency free — `IConverterOptions` stays in `Converter/` because it exposes `ServiceLifetime`, which would drag `Microsoft.Extensions.DependencyInjection.Abstractions` into the generator's analyzer context. Not packable on its own |
+| `Converter/` | netstandard2.1 | The shipped library, and the project that **is** the NuGet package `Majipro.Converter` — all three assemblies are packed from here |
 | `Converter.Tests/` | net10.0 | MSTest suite for the library |
-| `Converter.Generator/` | net10.0 | Roslyn `ISourceGenerator` that emits `IConverter<TFrom, TTo>` implementations |
+| `Converter.Generator/` | netstandard2.0 | Roslyn `ISourceGenerator` that emits `IConverter<TFrom, TTo>` implementations. netstandard2.0 is what an analyzer is, see *Packaging*. Not packable on its own |
 | `Converter.Generator.Test/` | net10.0 | MSTest suite for the generator |
 
-`Directory.Build.props` applies to every project and rewrites identity: `AssemblyName` and `RootNamespace` become `Majipro.<ProjectFolderName>`. So the folder `Converter` is namespace `Majipro.Converter`, `Converter.Tests` is `Majipro.Converter.Tests`, and `Converter.Abstrations` is `Majipro.Converter.Abstrations` (the folder name carries the typo, so the namespace and the package id do too). It also sets `TargetFramework` to netstandard2.1 — the test and generator projects override it to net10.0.
+`Directory.Build.props` applies to every project and rewrites identity: `AssemblyName` and `RootNamespace` become `Majipro.<ProjectFolderName>`. So the folder `Converter` is namespace `Majipro.Converter`, `Converter.Tests` is `Majipro.Converter.Tests`, and `Converter.Abstrations` is `Majipro.Converter.Abstrations` (the folder name carries the typo, so the namespace and the package id do too). It also sets `TargetFramework` to netstandard2.1 — the test projects override it to net10.0 and the generator to netstandard2.0. `Converter.Abstrations` multi-targets, and because the props file sets the **singular** `TargetFramework`, it has to clear it (`<TargetFramework />`) before `TargetFrameworks` means anything.
 
 The library targets **netstandard2.1**: no implicit usings, no nullable context, explicit `using System;` everywhere, and only APIs available on that surface. `LangVersion` is `latest`, so modern syntax (file-scoped namespaces, `record struct`) is fine.
 
@@ -46,8 +46,9 @@ Every `PackageReference` declares a **minimum**, written as an explicit range �
 | `MSTest` | both test projects | `[4.4.0,)` | `Assert.Throws<T>` (MSTest 4 dropped `Assert.ThrowsException`) and Microsoft.Testing.Platform |
 | `Microsoft.NET.Test.Sdk` | both test projects | `[18.10.1,)` | What the suites are validated against |
 | `Microsoft.Extensions.Hosting`, `Microsoft.Extensions.DependencyInjection` | test projects | `[8.0.0,)` | `Host.CreateDefaultBuilder` and `BuildServiceProvider` |
+| `System.Threading.Tasks.Extensions` | `Converter.Abstrations`, **netstandard2.0 asset only** | `[4.5.0,)` | `ValueTask<T>` of `IConvertingService`, which netstandard2.1 has in the box and netstandard2.0 does not. `PrivateAssets="all"`, so it reaches neither the netstandard2.1 asset nor the package |
 
-`Converter.Abstrations` has no package references at all, and it should stay that way — see the note in the projects table.
+`Converter.Abstrations` has no package reference on its netstandard2.1 asset, and that one should stay that way — see the note in the projects table. The netstandard2.0 asset carries `System.Threading.Tasks.Extensions` and nothing else, because that asset is loaded into the compiler's own process.
 
 **It is fine to raise a floor.** If a feature is needed that the declared minimum does not have, bump that number to the lowest version that has it, in the same `[X,)` form, and say in the commit message which API forced it. Do not work around a missing API to keep an old floor; the floor is a statement about what we use, not a promise.
 
@@ -159,15 +160,39 @@ Under `Converter.Generator.Test/Conversions/<Case>/` — or `Validations/<Case>/
 2. `<Case>Composition.cs` — `public class <Case>Composition : TestCompositionBase` with the `convertingService.Convert<From, To>(...)` call sites that trigger the generator. The `**\*Composition*.cs` glob in the csproj copies it to the output directory, and `ConversionTestBase` feeds it (plus `TestCompositionBase.cs`, which the same glob copies) to the compilation as source text. It is compiled into the test assembly as well, hence the harmless CS0436 warnings. It is also the only source the generator sees, so anything else the compilation is meant to contain — a converter written by hand, for instance — goes in this file next to the composition class.
 3. `<Case>Test.cs` — `[TestClass] class <Case>Test : ConversionTestBase<<Case>Composition>`, passing the composition file path to the base constructor. Resolve through `GetConverter<TFrom, TTo>()`, `GetReferenceConverter<TFrom, TTo>()`, `FindReferenceConverter<TFrom, TTo>()` (null instead of throwing), `GetConvertingService()` or `GetService<T>()`; assert on `Diagnostic` / `GeneratedSources` (`AssertGeneratedWithoutDiagnostics()` covers the common case).
 
+## Packaging
+
+**One package.** `Majipro.Converter` carries all three assemblies, and installing it is the whole setup — there is no second package to find and no `<Analyzer>` to write by hand:
+
+```
+lib/netstandard2.1/     Majipro.Converter.dll, Majipro.Converter.Abstrations.dll   <- what the program runs on
+analyzers/dotnet/cs/    Majipro.Converter.Generator.dll, Majipro.Converter.Abstrations.dll
+```
+
+`Converter/Converter.csproj` **is** the package. `Converter.Abstrations` and `Converter.Generator` are both `IsPackable=false`, which means a reference to them produces neither a package dependency nor a file — so both assemblies are put into the package from `Converter.csproj` by hand, by two targets:
+
+- `PackAbstrationsIntoLib` hangs off `TargetsForTfmSpecificBuildOutput` and adds the project reference's assembly to `BuildOutputInPackage`, which lands it in `lib/`. That is the **netstandard2.1** asset, the one `Converter` itself compiles against.
+- `PackGeneratorIntoAnalyzers` hangs off `TargetsForTfmSpecificContentInPackage` and asks the two projects for their `GetTargetPath`, pinned to **netstandard2.0**. Both files go to `analyzers/dotnet/cs`.
+
+Three things about that layout are load bearing:
+
+- **netstandard2.0 for the analyzer half is not a preference.** An analyzer is loaded into the compiler's own process, and that process is .NET Framework inside Visual Studio and .NET on the command line. netstandard2.0 is the only thing both of them load, which is why `Converter.Generator` targets it and why `Converter.Abstrations` grew a second asset rather than being moved wholesale.
+- **The abstractions travel twice**, once per half, because the generator resolves the converter interfaces through `typeof(IConverter<,>)` rather than by name — so the assembly has to be next to it in `analyzers/dotnet/cs`. It only ever asks those types for their names, never for their members (`typeof(...).FullName`, and a `nameof` the compiler turns into a literal), which is why the `ValueTask<T>` in `IConvertingService` never has to resolve there. Worth knowing when changing `ConversionSemantics`: the moment the generator touches a *member* of one of those interfaces, `System.Threading.Tasks.Extensions.dll` has to be packed into `analyzers/dotnet/cs` as well. The end to end check was run on the .NET hosted compiler; the .NET Framework host that Visual Studio uses is what the netstandard2.0 asset is *for*, but it has not been exercised here.
+- **`PrivateAssets="all"`** on `Converter` → `Converter.Abstrations` is what keeps the reference out of the nuspec. It also keeps it from flowing to projects in this solution, which is why `Converter.Tests` and `Converter.Generator.Test` declare their own reference to the abstractions — they use those types directly. A consumer of the *package* needs no such thing: every assembly in `lib/` is a compile time reference.
+
+`Converter.csproj` deliberately does **not** set `GeneratePackageOnBuild`: it writes a package on every build, Debug included, and it makes `dotnet pack` skip the build it is meant to pack, so packing a clean tree fails on `NU5026` instead of building it.
+
 ## CI / release
 
-`.github/workflows/pr.yml` builds Release and runs tests on PRs into `main`. `.github/workflows/main.yaml` fires on `v*` tags: it strips the leading `v` and passes the tag as `Version`/`AssemblyVersion`/`InformationalVersion` to `dotnet pack`, then pushes to nuget.org. Versions come from the tag only — there is no version in any csproj (gitversion is still listed in `.config/dotnet-tools.json` but is no longer used by the workflows).
+`.github/workflows/pr.yml` builds Release and runs tests on PRs into `main`. `.github/workflows/main.yaml` fires on `v*` tags: it strips the leading `v` into `$VERSION`, passes it to **`dotnet build` and to `dotnet pack`**, then pushes `artifacts/*.nupkg` — one file — to nuget.org. Versions come from the tag only; there is no version in any csproj (gitversion is still listed in `.config/dotnet-tools.json` but is no longer used by the workflows).
+
+The version has to reach the **build**, not only the pack: packing does not compile, so a version handed to `dotnet pack --no-build` alone names the package and leaves every assembly inside it saying `1.0.0.0`. `Version` by itself is enough — `AssemblyVersion`, `FileVersion` and `InformationalVersion` are all derived from it, and a prerelease tag like `v1.2.3-rc1` keeps working because `AssemblyVersion` comes from the part before the dash. Passing `AssemblyVersion` explicitly would fail on such a tag.
+
+`Converter.csproj` sets `BuildProjectReferences=false` when `NoBuild` is set, because packing with `NoBuild` does not set it and `ResolveReferences` then tries to build the referenced project and fails on `NETSDK1085`. That is exactly what the release workflow does, so the answer belongs in the project rather than in its command line.
 
 ## Current state of the working tree
 
-The solution builds clean and both suites pass (135 + 94). Open items:
+The solution builds clean and both suites pass (135 + 94), and the generator has been run end to end out of the packed `Majipro.Converter` by a throwaway consumer project: the analyzer loads, the converters are generated, and both conversions come back right. Open items:
 - A converter somebody wrote by hand is only found in the **assembly being compiled**: `ImplementedConverters` walks `compilation.Assembly.GlobalNamespace` and nothing else. So a solution with the hand written converters in a class library and the `Convert<X, Y>` call site in the application generates a second converter for that pair, and `AddConverting(library, application)` then throws about two implementations of it. Whether that is a bug or the boundary of what the generator is for is a decision, not an oversight — the cheap version of the other answer is to walk the referenced assemblies whose `IModuleSymbol.ReferencedAssemblySymbols` contain `Majipro.Converter.Abstrations`, which is one or two assemblies rather than the whole framework. Note that it cuts the other way too: a project that registers only its own assembly would lose the converter it generates today.
 - `enum -> enum` is generated for a **call site** only. As a *property* type it is not: `ConvertedValueRule` gates on `IsMappableSource`, which is class-or-struct, so an enum property never reaches `EnumBodyRule`. Since `MC0003` that is no longer a silent drop — one enum per layer, the shape consuming projects write converters for by hand, now fails the build (`Validations/UnconvertibleProperty`). Letting it through is a one line change and it is now the *smaller* change of the two, since the pairs that line up would start converting and the ones that do not would trade an `MC0003` that says nothing fills the property for an `MC0002` that says which members are missing. Worth doing deliberately.
-- The order sensitivity described under *Testing conventions* is real, not theoretical: a solution wide `dotnet test` has been seen failing one `Converter.Tests` test once and passing the next six runs, with `Converter.Tests` alone green every time. Whichever test it is, the fix is reworking the static `ConversionTestBase.ConvertingService`, not retrying the run.
-- `Converter.Generator` targets net10.0, so it cannot be loaded as an analyzer by the compiler yet — it only runs in-process from the tests. Packing it means moving it (and `Converter.Abstrations`, which it now references) to netstandard2.0 and adding the analyzer packaging bits: both dlls into `analyzers/dotnet/cs` (see the reference project's csproj). `Converter.Abstrations` has no package references, so those two dlls are all the analyzer context needs.
-- `dotnet pack` on the solution produces the two packages that mean something — `Majipro.Converter` and `Majipro.Converter.Abstrations`, a proper dependency of the first one. `Converter.Generator` is `IsPackable=false`, because a `lib/net10.0` package of it does nothing when installed and `.github/workflows/main.yaml` pushes `artifacts/*.nupkg` on a `v*` tag, so it would land on nuget.org as is. Take the flag out together with the analyzer packaging above, not before.
+- The order sensitivity described under *Testing conventions* is real, not theoretical, and it is the **`StringTo{Decimal,Double,Float}ConverterTests` family** — the classes that call `ClassInitializeAsync(configure)` from inside a `[TestMethod]`. Three failures in about a dozen solution wide `dotnet test` runs, a *different* member of the family each time (`WhenInputIsCanBeDecimalThenReturnDecimalOtherwiseDefault("123,45", AllowDecimalPoint, "cs-CZ")` and `WhenInputIsCanBeFloatThenReturnFloatOtherwiseDefault("$ 123,456.78", Currency, "en-US")` so far), and never once when `Converter.Tests` runs alone. They read `FormatProvider`/`NumberStyles` off the static `ConversionTestBase.ConvertingService` while another class of the family is reconfiguring that same host in parallel, so whichever one loses the race is the one that fails. The fix is reworking that static field, not retrying the run.

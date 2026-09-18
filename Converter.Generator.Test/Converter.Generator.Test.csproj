@@ -19,6 +19,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Converter.Generator\Converter.Generator.csproj" />
       <ProjectReference Include="..\Converter\Converter.csproj" />
+      <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>

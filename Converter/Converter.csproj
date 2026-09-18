@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <!-- Deliberately not GeneratePackageOnBuild: it writes a package on every build, Debug
+             included, and it makes `dotnet pack` skip the build it is supposed to pack, so packing
+             a clean tree fails on NU5026 instead of building it. Packing is its own step. -->
         <PackageProjectUrl>https://github.com/majipro-s-r-o/Converter</PackageProjectUrl>
         <RepositoryUrl>https://github.com/majipro-s-r-o/Converter</RepositoryUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -10,8 +12,37 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <!-- This project is the package. Majipro.Converter carries all three assemblies: the two
+             the consuming program runs on, in lib/, and the generator, in analyzers/dotnet/cs where
+             the compiler picks it up on its own. Installing one package is the whole setup - there
+             is no second package to find and no <Analyzer> to write by hand. Neither of the other
+             two projects is packable, so both of them have to be put into the package from here. -->
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);PackAbstrationsIntoLib</TargetsForTfmSpecificBuildOutput>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackGeneratorIntoAnalyzers</TargetsForTfmSpecificContentInPackage>
+
+        <!-- Asking the references where their assemblies are is not asking for them to be built,
+             but ResolveReferences does not know that: packing with NoBuild set does not set this,
+             and the referenced project then fails on NETSDK1085. That is exactly what the release
+             workflow does, so the answer belongs here rather than in its command line. -->
+        <BuildProjectReferences Condition="'$(NoBuild)' == 'true'">false</BuildProjectReferences>
+    </PropertyGroup>
+
     <ItemGroup>
-      <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" />
+        <!-- Travels inside this package rather than as a dependency on one of its own, so the
+             reference must not flow out of this project - PrivateAssets is what keeps it out of
+             the nuspec. The assembly itself is put into lib/ by the target below, and a project in
+             this solution that needs the abstractions declares them itself, the way the two test
+             projects do. A consumer of the package needs no such thing: every assembly in lib/ is
+             a compile time reference. -->
+        <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" PrivateAssets="all" />
+
+        <!-- A build time asset. This assembly does not reference the generator and must not: the
+             reference is here so that packing this project builds it, and so that the path below
+             is the path of something that exists. -->
+        <ProjectReference Include="..\Converter.Generator\Converter.Generator.csproj"
+                          PrivateAssets="all"
+                          ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>
@@ -25,5 +56,38 @@
             <PackagePath>\</PackagePath>
         </None>
     </ItemGroup>
+
+    <!-- lib/: the runtime half. Majipro.Converter.dll is the build output and arrives by itself,
+         Majipro.Converter.Abstrations.dll is a project reference and would otherwise be left out,
+         because a reference to a project that is not packable produces neither a dependency nor a
+         file. The netstandard2.1 asset of it is the one that belongs here. -->
+    <Target Name="PackAbstrationsIntoLib" DependsOnTargets="ResolveReferences">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)"
+                                  Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' AND '%(Extension)' == '.dll'" />
+        </ItemGroup>
+    </Target>
+
+    <!-- analyzers/dotnet/cs: the build time half. The generator and the abstractions it resolves
+         the converter interfaces through, both of them the netstandard2.0 asset, because this is
+         the compiler's own process and in Visual Studio that process is .NET Framework. -->
+    <Target Name="PackGeneratorIntoAnalyzers">
+        <MSBuild Projects="..\Converter.Generator\Converter.Generator.csproj"
+                 Targets="GetTargetPath"
+                 Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
+            <Output TaskParameter="TargetOutputs" ItemName="_AnalyzerAssembly" />
+        </MSBuild>
+
+        <MSBuild Projects="..\Converter.Abstrations\Converter.Abstrations.csproj"
+                 Targets="GetTargetPath"
+                 Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
+            <Output TaskParameter="TargetOutputs" ItemName="_AnalyzerAssembly" />
+        </MSBuild>
+
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="@(_AnalyzerAssembly)"
+                                    PackagePath="analyzers/dotnet/cs/%(Filename)%(Extension)" />
+        </ItemGroup>
+    </Target>
 
 </Project>

@@ -1,3 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+    <PropertyGroup>
+        <!-- Two assets for two homes, and Directory.Build.props sets the singular one, so it has to
+             be cleared first. netstandard2.1 is what the runtime consumes, alongside Converter.dll
+             in lib/. netstandard2.0 is what the generator is compiled against and what travels with
+             it into analyzers/dotnet/cs, because an analyzer is loaded by the compiler itself -
+             which in Visual Studio runs on .NET Framework, where a netstandard2.1 assembly can not
+             be loaded at all. -->
+        <TargetFramework />
+        <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+
+        <!-- Shipped inside Majipro.Converter rather than as a package of its own, see Converter.csproj. -->
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+        <!-- ValueTask<T> of IConvertingService, which netstandard2.1 has in the box and
+             netstandard2.0 does not. PrivateAssets keeps it off the netstandard2.1 asset and out of
+             everything that consumes it - nothing but the generator ever compiles against this one,
+             and the generator only asks the interfaces for their names. -->
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="[4.5.0,)" PrivateAssets="all" />
+    </ItemGroup>
+
 </Project>
