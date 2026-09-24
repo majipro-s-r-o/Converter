@@ -10,6 +10,12 @@ jobs:
         
         runs-on: ubuntu-latest
         
+        permissions:
+            # Checkout of the repository content.
+            contents: read
+            # Issuance of the OIDC token that nuget.org exchanges for a short-lived API key.
+            id-token: write
+        
         steps:
             -   uses: actions/checkout@v4
                 with:
@@ -36,5 +42,12 @@ jobs:
                     VERSION="${VERSION#v}"
                     dotnet pack --no-build --configuration Release /p:Version="$VERSION" /p:AssemblyVersion="$VERSION" /p:InformationalVersion="$VERSION"  --output artifacts
 
+            # The issued API key is valid for one hour, so it is requested right before the push.
+            -   name: NuGet login
+                id: nuget-login
+                uses: NuGet/login@v1
+                with:
+                    user: jiri.paukert
+
             -   name: Publish
-                run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+                run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
