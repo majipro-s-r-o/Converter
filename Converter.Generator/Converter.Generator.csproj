@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- netstandard2.0 is not a preference, it is what an analyzer is: the compiler loads this
+             assembly into its own process, and that process is .NET Framework inside Visual Studio
+             and .NET on the command line. netstandard2.0 is the only thing both of them load. -->
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <NoWarn>$(NoWarn);RS2008</NoWarn>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+
+        <!-- Shipped inside Majipro.Converter as an analyzer, not as a package of its own: a
+             lib/ package of a generator does nothing at all when installed. See Converter.csproj. -->
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="[4.3.1,)" PrivateAssets="all" />
+        <!-- MC0001 is reported by the generator itself, analyzer release tracking is not used here. -->
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="[3.3.3,)">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The generator resolves the converter interfaces by their real types instead of by name,
+             so Majipro.Converter.Abstrations.dll has to sit next to this one in analyzers/dotnet/cs
+             - Converter.csproj packs both. PrivateAssets keeps the reference from turning into a
+             package dependency of anything. -->
+        <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Majipro.Converter.Generator.Test" />
+    </ItemGroup>
+</Project>

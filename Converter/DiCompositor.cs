@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Majipro.Converter.Abstrations;
 using Majipro.Converter.Converters;
 using Majipro.Converter.Extensions;
 using Microsoft.Extensions.DependencyInjection;

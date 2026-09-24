@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Majipro.Converter.Abstrations;
 
 namespace Majipro.Converter.Tests.Tests.DiComposition;
 
@@ -29,7 +30,7 @@ public sealed class ValidatorTests
     {
         var types = new List<Type> { typeof(ConverterAB), typeof(ConverterAB) };
 
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             DiCompositionValidator.ValidateOrThrow(types));
     }
 
@@ -54,7 +55,7 @@ public sealed class ValidatorTests
     {
         var types = new List<Type> { typeof(ReferenceConverterEF), typeof(ReferenceConverterEF) };
 
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             DiCompositionValidator.ValidateOrThrow(types));
     }
 
@@ -63,7 +64,7 @@ public sealed class ValidatorTests
     {
         var types = new List<Type> { typeof(AsyncReferenceConverterGH), typeof(AsyncReferenceConverterGH) };
 
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             DiCompositionValidator.ValidateOrThrow(types));
     }
 
@@ -80,7 +81,7 @@ public sealed class ValidatorTests
     {
         var types = new List<Type> { typeof(AsyncConverterIJ), typeof(AsyncConverterIJ) };
 
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             DiCompositionValidator.ValidateOrThrow(types));
     }
 
@@ -89,7 +90,7 @@ public sealed class ValidatorTests
     {
         var types = new List<Type> { typeof(SyncAndAsyncConverterAB) };
 
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             DiCompositionValidator.ValidateOrThrow(types));
     }
 
