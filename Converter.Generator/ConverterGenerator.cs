@@ -112,7 +112,8 @@ internal class ConverterGenerator : ISourceGenerator
         {
             new ToStringBodyRule(),
             new EnumBodyRule(),
-            new ObjectInitializerBodyRule(valueRules)
+            new ObjectInitializerBodyRule(valueRules),
+            new DirectBodyRule()
         };
     }
 }

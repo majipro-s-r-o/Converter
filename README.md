@@ -343,6 +343,8 @@ Generation is recursive: a property whose type is itself a mappable pair is conv
 | --- | --- | --- |
 | Property of the same type | `string` to `string` | Also implicit conversions — `Guid` to `Guid?`, `int` to `long`, differing nullable annotations |
 | Nested objects | `Address` to `AddressDto` | Converted through `IConvertingService`, the nested pair is generated as well |
+| Closed generic types | `Wrapper<Guid, Person>` to `Wrapper<Guid, PersonDto>` | Mapped like any other class. The type arguments have to be types — the same wrapper closed over a type parameter of the method calling `Convert` is skipped, see below |
+| A pair the compiler already takes | `IProducer<Dog>` to `IProducer<Animal>` (`out T`), `IConsumer<Animal>` to `IConsumer<Dog>` (`in T`), `int` to `long`, `int` to `int?` | Variance, an implicit reference or numeric conversion, an implicit operator of your own — the Converter hands the value back. A pair that can *also* be mapped property by property is mapped into a new instance instead |
 | Collections | `List<Address>` to `List<AddressDto>` | Source is any `IEnumerable<T>`, target is `IEnumerable<>`, `ICollection<>`, `IList<>`, `IReadOnlyCollection<>`, `IReadOnlyList<>` or `List<>` |
 | Scalar to its text | `int` to `string`, `DateTime` to `string` | Written as `System.Convert.ToString` |
 | Text to a scalar | `string` to `int` | Only for the build in Converters listed above, so `FormatProvider` and the other options apply |
@@ -363,6 +365,8 @@ The generator never guesses. When it recognizes a pair but can not write it dete
 | `MC0001` | Anything else that went wrong while generating |
 
 A pair you ask for always ends one of three ways, and never in silence: a Converter is generated for it, one you wrote or one the library ships answers it, or the build fails. The two exceptions are a pair whose sides are the same type, which `IConvertingService` handles by itself, and a call site whose type is a generic type parameter, which is not a pair until the method is used.
+
+One shape ends on `MC0003` for a reason that is not really about the property it names: a generic type constructed over itself, a `Node<T>` whose property is a `Node<Node<T>>`, asks for a bigger Converter without end. Names whose type arguments nest deeper than eight are not mapped, so such a property is reported as one nothing fills rather than being generated forever.
 
 ### Where it looks for your Converters
 Across assemblies, which is what makes `MC0004` a statement about the pair rather than about the project it was asked for in. The generator looks for **implementations** — the same thing `AddConverting` looks for at runtime — in the assembly being compiled **and in every referenced assembly that references this library**. So the ordinary shape, Converters in a class library and `Convert` calls in an application, is seen for what it is: the pair is implemented, nothing is generated for it, and nothing is reported about it.

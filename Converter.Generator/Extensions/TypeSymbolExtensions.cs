@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -6,6 +7,15 @@ namespace Majipro.Converter.Generator.Extensions;
 
 internal static class TypeSymbolExtensions
 {
+    /// <summary>
+    /// How deeply the type arguments of a name may nest before the generator stops treating it as a
+    /// type it maps. A termination bound rather than a judgement about the type, see the remarks on
+    /// <see cref="IsMappableSource"/>: eight is several times deeper than anything worth converting,
+    /// and shallow enough that a type growing out of its own definition ends the pass instead of
+    /// travelling forever.
+    /// </summary>
+    private const int MaxTypeArgumentDepth = 8;
+
     /// <summary>
     /// Public, non static, non indexer, non compiler generated instance properties, base types included.
     /// Properties hidden by a more derived declaration are returned only once.
@@ -105,14 +115,38 @@ internal static class TypeSymbolExtensions
     }
 
     /// <summary>
-    /// Types the generator is able to read from: a plain, non generic class or structure.
+    /// Types the generator is able to read from: a class or structure that carries what it means in
+    /// its properties. A generic type is one of them as long as it is closed, which is
+    /// <see cref="IsVisibleToGeneratedCode"/>'s answer rather than a question of its own - a type
+    /// argument that is a type parameter is not a name a generated file can carry, while
+    /// <c>Wrapper&lt;Guid, Person&gt;</c> is a name like any other.
     /// </summary>
+    /// <remarks>
+    /// Two shapes are refused although they are classes with properties.
+    ///
+    /// A collection means the items it holds rather than the properties it declares, and those
+    /// properties are no substitute for them: mapping a <c>List&lt;T&gt;</c> as an object would copy
+    /// its capacity and quietly return an empty list. Items are
+    /// <see cref="Rules.CollectionValueRule"/>'s business, and asking this here is what keeps one
+    /// type from meaning two different things.
+    ///
+    /// A name nested deeper than <see cref="MaxTypeArgumentDepth"/> is refused because closed
+    /// generics are the point at which the pairs stop being a finite set. A <c>Node&lt;T&gt;</c>
+    /// with a property of type <c>Node&lt;Node&lt;T&gt;&gt;</c> asks for a converter whose own
+    /// property asks for the next one, forever, and every one of those is a pair
+    /// <see cref="Conversions.ConversionQueue"/> has not handled yet - progress, as far as it can
+    /// tell. A compilation declares only so many generic definitions, so bounding how deeply their
+    /// arguments may nest is what makes the names finite again and the travelling end. What falls
+    /// outside the bound fails the build the way any other pair no rule claims does, which is the
+    /// point: a generation that never comes back is the one outcome nothing can be done about.
+    /// </remarks>
     internal static bool IsMappableSource(this ITypeSymbol type)
     {
         return type is INamedTypeSymbol named &&
-               named.IsGenericType == false &&
                named.SpecialType == SpecialType.None &&
                (named.TypeKind == TypeKind.Class || named.TypeKind == TypeKind.Struct) &&
+               named.IsCollection() == false &&
+               named.GetTypeArgumentDepth() <= MaxTypeArgumentDepth &&
                named.IsVisibleToGeneratedCode();
     }
 
@@ -138,6 +172,46 @@ internal static class TypeSymbolExtensions
         return type.InstanceConstructors.Any(c =>
             c.Parameters.Length == 0 &&
             (c.DeclaredAccessibility == Accessibility.Public || c.DeclaredAccessibility == Accessibility.Internal));
+    }
+
+    /// <summary>
+    /// A type that means the items it holds rather than the properties it declares. Asked of the non
+    /// generic <see cref="System.Collections.IEnumerable"/>, which is every collection there is, and
+    /// which takes nothing but the type itself to answer.
+    /// </summary>
+    private static bool IsCollection(this INamedTypeSymbol type)
+    {
+        return type.AllInterfaces.Any(i => i.SpecialType == SpecialType.System_Collections_IEnumerable);
+    }
+
+    /// <summary>
+    /// How deeply the type arguments of a name are nested: <c>Person</c> is none,
+    /// <c>Wrapper&lt;Person&gt;</c> is one, <c>Wrapper&lt;Wrapper&lt;Person&gt;&gt;</c> is two. Every
+    /// part of the name counts, the arguments of what it is nested in included.
+    /// </summary>
+    private static int GetTypeArgumentDepth(this ITypeSymbol type)
+    {
+        if (type is IArrayTypeSymbol array)
+        {
+            return array.ElementType.GetTypeArgumentDepth();
+        }
+
+        if (type is not INamedTypeSymbol named)
+        {
+            return 0;
+        }
+
+        var depth = 0;
+
+        for (var current = named; current != null; current = current.ContainingType)
+        {
+            foreach (var argument in current.TypeArguments)
+            {
+                depth = Math.Max(depth, argument.GetTypeArgumentDepth() + 1);
+            }
+        }
+
+        return depth;
     }
 
     /// <summary>
@@ -184,9 +258,17 @@ internal static class TypeSymbolExtensions
             {
                 return false;
             }
+
+            // The arguments of every level, not only of the outermost one: naming
+            // Outer<Secret>.Inner means writing Secret down as well. A type parameter is refused
+            // here, which is what makes a closed generic type the only generic one that is mappable.
+            if (current.TypeArguments.All(a => a.IsAsAccessibleAs(required)) == false)
+            {
+                return false;
+            }
         }
 
-        return named.TypeArguments.All(a => a.IsAsAccessibleAs(required));
+        return true;
     }
 
     private static bool IsAtLeast(this Accessibility declared, Accessibility required)

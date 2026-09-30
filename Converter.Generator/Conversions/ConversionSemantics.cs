@@ -179,7 +179,9 @@ internal sealed class ConversionSemantics
     }
 
     /// <summary>
-    /// Whether the compiler would take the source value for the target property without a cast.
+    /// Whether the compiler would take the source value for the target without a cast - asked of one
+    /// property by <see cref="Rules.DirectValueRule"/> and of a whole pair by
+    /// <see cref="Rules.DirectBodyRule"/>.
     /// </summary>
     public bool IsAssignable(ITypeSymbol source, ITypeSymbol target)
     {
