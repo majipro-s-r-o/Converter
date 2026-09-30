@@ -85,9 +85,10 @@ public class WrittenReferenceConverter :
 }
 
 /// <summary>
-/// A pair no rule knows how to write, written by hand. Nothing is generated for it, and because it
-/// is implemented nothing is reported for it either - that is the line MC0004 draws: the error is
-/// about a pair nobody answers, not about a pair the generator does not write.
+/// A pair the generator would write itself - <c>DirectBodyRule</c> hands an <c>int</c> back as a
+/// <c>long</c> - written by hand anyway. Nothing is generated for it, because having written one is
+/// what suppresses the pair, and nothing is reported for it either: that is the line MC0004 draws,
+/// the error is about a pair nobody answers rather than about a pair the generator does not write.
 /// </summary>
 public class NumberConverter : IConverter<int, long>
 {
