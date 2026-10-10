@@ -79,7 +79,7 @@ internal sealed class EntityToDomainConverter : IConverter<Entity, Domain>
         {
             Firstname = from.Firstname,
             Lastname = from.Lastname
-        }
+        };
     }
 }
 ```
@@ -310,7 +310,7 @@ This means you can migrate converters from sync to async (or vice versa) without
 You do not have to write a Converter for every pair. The package ships a source generator that writes the obvious ones for you at compile time, and `AddConverting` picks them up the same way it picks up yours — they are ordinary classes in the assembly being compiled.
 
 ### How it works
-The generator looks at your `Convert<TFrom, TTo>` / `ConvertAsync<TFrom, TTo>` call sites. Every pair it finds that nobody wrote a Converter for gets one generated, in namespace `Majipro.Converter.Generated`:
+The generator looks at your `Convert<TFrom, TTo>` / `ConvertAsync<TFrom, TTo>` call sites, including those written with a type parameter inside a generic method (see [Generic call sites](#generic-call-sites)). Every pair it finds that nobody wrote a Converter for gets one generated, in namespace `Majipro.Converter.Generated`:
 ```csharp
 // You write this call, and nothing else
 var domain = _convertingService.Convert<Entity, Domain>(entity);
@@ -345,7 +345,7 @@ Generation is recursive: a property whose type is itself a mappable pair is conv
 | Nested objects | `Address` to `AddressDto` | Converted through `IConvertingService`, the nested pair is generated as well |
 | Closed generic types | `Wrapper<Guid, Person>` to `Wrapper<Guid, PersonDto>` | Mapped like any other class. The same wrapper closed over a type parameter of the method calling `Convert` is a generic call site, see the next row |
 | A pair the compiler already takes | `IProducer<Dog>` to `IProducer<Animal>` (`out T`), `IConsumer<Animal>` to `IConsumer<Dog>` (`in T`), `int` to `long`, `int` to `int?` | Variance, an implicit reference or numeric conversion, an implicit operator of your own — the Converter hands the value back. A pair that can *also* be mapped property by property is mapped into a new instance instead |
-| Generic call sites | `Convert<TKind, KindDto>(kind)` inside `Build<TKind>(...)` | Not a pair by itself — the pairs are what the callers of `Build` close it over, type arguments inferred or written out, through any number of generic methods handing the type parameter on, extension methods and the type a method is called on (`new Mapper<Kind>().Map(...)`) included. Each of those is generated (or refused) like a pair written out. When no call closing it is found in the compilation, it is `MC0005`, see below |
+| Generic call sites | `Convert<TKind, KindDto>(kind)` inside `Build<TKind>(...)` | Converted for every type the callers of `Build` pass in, see [Generic call sites](#generic-call-sites) |
 | Collections | `List<Address>` to `List<AddressDto>` | Source is any `IEnumerable<T>`, target is `IEnumerable<>`, `ICollection<>`, `IList<>`, `IReadOnlyCollection<>`, `IReadOnlyList<>` or `List<>` |
 | Scalar to its text | `int` to `string`, `DateTime` to `string` | Written as `System.Convert.ToString` |
 | Text to a scalar | `string` to `int` | Only for the build in Converters listed above, so `FormatProvider` and the other options apply |
@@ -355,18 +355,47 @@ Generation is recursive: a property whose type is itself a mappable pair is conv
 
 Both conversions are generated wherever they make sense — `Convert(from)` creating a new instance and `Convert(from, to)` filling one you already hold (see *Reference converters*). The second one is left out when the target has `init` only properties or is a value type, since there is no instance to enhance in that case.
 
+### Generic call sites
+A `Convert` call written with a type parameter is not a pair by itself. The pairs are whatever the method's callers pass in, and the generator follows the calls to find them:
+```csharp
+private KindDto ToDto<TKind>(TKind kind)
+{
+    return _convertingService.Convert<TKind, KindDto>(kind);
+}
+
+// TKind is inferred here, so OrderKind -> KindDto is never written out anywhere,
+// and yet it is the pair that gets generated
+var dto = ToDto(order.Kind);
+```
+Each pair found this way is treated exactly like one written out. It is generated, or skipped because you wrote that Converter yourself, or refused with an error from the table below. A generic helper used with two types, one with a hand written Converter and one without, gets a generated Converter for the second only.
+
+The generator follows:
+- type arguments that are inferred, as well as ones written out
+- a type parameter handed on through any number of generic methods, recursive calls included
+- extension methods, closed by their receiver
+- a type parameter of the class, closed by the type the method is called on (`new Mapper<Kind>().Map(kind)`)
+- generic local functions, and `Convert` calls inside lambdas
+
+It does **not** follow a method reached through an interface or a base class member, a method group or delegate, reflection, or a call from another assembly (a public generic method in a class library, called from an application). When none of the calls that decide the type can be found, the call site gets the `MC0005` warning below.
+
 ### What it refuses
 The generator never guesses. When it recognizes a pair but can not write it deterministically, it fails the build with an error instead of generating a Converter that silently loses data:
 
-| Diagnostic | Means |
-| --- | --- |
-| `MC0002` | An enum member on the source has no counterpart of that name on the target |
-| `MC0003` | A writable target property has nothing to fill it — the source has no property of that name, or the two types are not convertible |
-| `MC0004` | The pair itself can not be written, and no Converter for it is implemented in this assembly or in any assembly it references — the `Convert` call would compile and throw at runtime, so it fails the build instead |
-| `MC0001` | Anything else that went wrong while generating |
-| `MC0005` | **Warning.** A `Convert` call names a type parameter and no call closing it was found in the compilation — the method is reached through an interface, a base class, a delegate or from another assembly. Nothing is generated for it and nothing can tell whether a Converter exists for the pairs it asks for at runtime. Write those Converters yourself, or raise it to an error with `dotnet_diagnostic.MC0005.severity = error` |
+| Diagnostic | Severity | Means |
+| --- | --- | --- |
+| `MC0002` | Error | An enum member on the source has no counterpart of that name on the target |
+| `MC0003` | Error | A writable target property has nothing to fill it — the source has no property of that name, or the two types are not convertible |
+| `MC0004` | Error | The pair itself can not be written, and no Converter for it is implemented in this assembly or in any assembly it references — the `Convert` call would compile and throw at runtime, so it fails the build instead |
+| `MC0005` | Warning | A `Convert` call uses a type parameter and no call deciding that type was found in the compilation (see [Generic call sites](#generic-call-sites)). Nothing is generated for it, and nothing can tell whether a Converter will exist for the pairs it asks for at runtime |
+| `MC0001` | Error | Anything else that went wrong while generating |
 
-A pair you ask for always ends one of three ways, and never in silence: a Converter is generated for it, one you wrote or one the library ships answers it, or the build fails. The two exceptions are a pair whose sides are the same type, which `IConvertingService` handles by itself, and a generic call site no caller closes in the compilation, which is `MC0005` — a warning, since the pairs it will be called with may well have Converters in the assembly that calls it.
+The errors apply to pairs found through a generic call site the same way as to pairs written out, so a generic helper is no way around them.
+
+A pair you ask for always ends one of three ways, and never in silence: a Converter is generated for it, one you wrote or one the library ships answers it, or the build fails. The two exceptions are a pair whose sides are the same type, which `IConvertingService` handles by itself, and a generic call site whose callers the generator can not see, which is `MC0005`. That one is a warning because the pairs it is called with may well have Converters in the assembly that calls it. If they do, turn it off for that project. If you want it enforced, make it an error. Either way it goes in `.editorconfig`:
+```ini
+[*.cs]
+dotnet_diagnostic.MC0005.severity = none   # or: error
+```
 
 One shape ends on `MC0003` for a reason that is not really about the property it names: a generic type constructed over itself, a `Node<T>` whose property is a `Node<Node<T>>`, asks for a bigger Converter without end. Names whose type arguments nest deeper than eight are not mapped, so such a property is reported as one nothing fills rather than being generated forever.
 
@@ -385,7 +414,7 @@ Two shapes stay outside of this, and neither is found by a type scan at runtime 
 | A Converter that is `internal` to a **referenced** assembly | The compiler does not show a referenced assembly's internals to this compilation, while that assembly's own `AddConverting` registers it at runtime | Make it public, or move it into the assembly holding the call site |
 
 ### How to take over
-Write the Converter yourself, in this assembly or in any assembly it references. A pair you implemented — `IConverter<TFrom, TTo>`, `IAsyncConverter<TFrom, TTo>` or a Reference Converter extending either — is skipped by the generator entirely, so the two never collide. That is the answer to every refusal: `MC0002` and `MC0003` are the shapes only you can decide, and `MC0004` is the pair nobody has written yet.
+Write the Converter yourself, in this assembly or in any assembly it references. A pair you implemented — `IConverter<TFrom, TTo>`, `IAsyncConverter<TFrom, TTo>` or a Reference Converter extending either — is skipped by the generator entirely, so the two never collide. That is the answer to every refusal: `MC0002` and `MC0003` are the shapes only you can decide, `MC0004` is the pair nobody has written yet, and `MC0005` is a set of pairs only you know.
 
 ## Options reference
 | Option | Default | Applies to |
@@ -415,7 +444,7 @@ public sealed class BusinessLogicService
         var entity = StaticHelper.GetEntities();
         
         // This call will call your IConverter<Entity, Domain> converter
-        var domain = _converter.Convert<Entity, Domain>(entity);
+        var domain = _converter.Convert(entity);
         
         return domain;
     }
@@ -435,6 +464,8 @@ builder.Services.AddConverting<MyClass>();
 | `There is no conversion from 'X' to 'Y'` at runtime | Nothing is registered for the pair. The generator reports the pairs it can see as `MC0004` at build time, so what is left is what it can not see: the assembly holding the Converter was not passed to `AddConverting`, or the call site is generic and reached in a way the generator does not follow, which is `MC0005` |
 | `Duplicate converter registrations found` at startup | Two classes claim the same `From -> To` pair. A Reference Converter and the `IConverter` it extends are one registration and are not this |
 | `MC0002`, `MC0003`, `MC0004` at build time | The generator refuses the pair, see [What it refuses](#what-it-refuses). Write the Converter yourself, as a class — in this assembly or in one it references |
+| `MC0002`, `MC0003`, `MC0004` naming types no `Convert<,>` call of yours writes out | A generic helper is called with those types, see [Generic call sites](#generic-call-sites). Before the generator followed generic call sites, this conversion compiled and threw at runtime |
+| `MC0005` warning on a `Convert` call | The generator can not see who calls the generic method it is in. Make sure every type it is called with has a Converter, then turn the warning off or keep it, see [What it refuses](#what-it-refuses) |
 | The generated Converter is not found at runtime | It is generated into the assembly holding the call site, so that assembly has to be one of the ones you hand to `AddConverting` |
 | A hand written Converter is duplicated by a generated one | The Converter is `internal` to a referenced assembly, so the compilation it is generated into can not see it. Make it public, or move it next to the call site |
 
