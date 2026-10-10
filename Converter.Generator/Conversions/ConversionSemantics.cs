@@ -238,6 +238,91 @@ internal sealed class ConversionSemantics
             : null;
     }
 
+    /// <summary>
+    /// The type with every type parameter <paramref name="arguments"/> knows replaced by what it
+    /// stands for, which is what a generic method means at one particular place it is called from.
+    /// Type parameters the map does not know stay where they are. <c>null</c> when the name is built
+    /// out of something that can not be rebuilt (a pointer to a type parameter, for instance).
+    /// </summary>
+    /// <remarks>
+    /// Roslyn has no public substitution, so the name is rebuilt from the outside in: whatever the
+    /// type is nested in first, since <c>Outer&lt;T&gt;.Inner&lt;U&gt;</c> is a member of a
+    /// constructed <c>Outer</c>, and only then its own arguments.
+    /// </remarks>
+    public ITypeSymbol? Substitute(
+        ITypeSymbol type,
+        IReadOnlyDictionary<ITypeParameterSymbol, ITypeSymbol> arguments)
+    {
+        if (type.ContainsTypeParameter() == false)
+        {
+            return type;
+        }
+
+        switch (type)
+        {
+            case ITypeParameterSymbol parameter:
+                return arguments.TryGetValue(parameter, out var argument) ? argument : parameter;
+
+            case IArrayTypeSymbol array:
+            {
+                var element = Substitute(array.ElementType, arguments);
+
+                return element == null
+                    ? null
+                    : _compilation.CreateArrayTypeSymbol(element, array.Rank)
+                        .WithNullableAnnotation(array.NullableAnnotation);
+            }
+
+            case INamedTypeSymbol named:
+            {
+                var definition = named.ConstructedFrom;
+
+                if (named.ContainingType != null && named.ContainingType.ContainsTypeParameter())
+                {
+                    if (Substitute(named.ContainingType, arguments) is not INamedTypeSymbol container)
+                    {
+                        return null;
+                    }
+
+                    definition = container
+                        .GetTypeMembers(named.Name, named.Arity)
+                        .FirstOrDefault();
+
+                    if (definition == null)
+                    {
+                        return null;
+                    }
+                }
+
+                if (named.Arity == 0)
+                {
+                    return definition.WithNullableAnnotation(named.NullableAnnotation);
+                }
+
+                var typeArguments = new ITypeSymbol[named.TypeArguments.Length];
+
+                for (var i = 0; i < typeArguments.Length; i++)
+                {
+                    var typeArgument = Substitute(named.TypeArguments[i], arguments);
+
+                    if (typeArgument == null)
+                    {
+                        return null;
+                    }
+
+                    typeArguments[i] = typeArgument;
+                }
+
+                return definition
+                    .Construct(typeArguments)
+                    .WithNullableAnnotation(named.NullableAnnotation);
+            }
+
+            default:
+                return null;
+        }
+    }
+
     public SemanticModel GetSemanticModel(SyntaxTree syntaxTree)
     {
         if (_semanticModels.TryGetValue(syntaxTree, out var semanticModel) == false)

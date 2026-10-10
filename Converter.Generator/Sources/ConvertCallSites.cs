@@ -23,6 +23,19 @@ internal sealed class ConvertCallSites : IPairSource
 
     public IEnumerable<ConversionPair> Pairs()
     {
+        foreach (var callSite in CallSites())
+        {
+            yield return callSite.Pair;
+        }
+    }
+
+    /// <summary>
+    /// The pairs together with the invocation asking for them, for whoever needs to know where a
+    /// pair was written - <see cref="GenericCallSites"/> follows a pair named by type parameters
+    /// back to the methods calling the one it is written in.
+    /// </summary>
+    public IEnumerable<ConvertCallSite> CallSites()
+    {
         foreach (var node in _nodes)
         {
             if (_semantics.GetSemanticModel(node.SyntaxTree).GetSymbolInfo(node).Symbol is not IMethodSymbol method)
@@ -43,7 +56,22 @@ internal sealed class ConvertCallSites : IPairSource
                 continue;
             }
 
-            yield return new ConversionPair(method.TypeArguments[0], method.TypeArguments[1]);
+            yield return new ConvertCallSite(
+                new ConversionPair(method.TypeArguments[0], method.TypeArguments[1]),
+                node);
         }
+    }
+}
+
+internal readonly struct ConvertCallSite
+{
+    public ConversionPair Pair { get; }
+
+    public InvocationExpressionSyntax Node { get; }
+
+    public ConvertCallSite(ConversionPair pair, InvocationExpressionSyntax node)
+    {
+        Pair = pair;
+        Node = node;
     }
 }

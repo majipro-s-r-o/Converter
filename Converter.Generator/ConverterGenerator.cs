@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Majipro.Converter.Generator.Conversions;
 using Majipro.Converter.Generator.Diagnostics;
+using Majipro.Converter.Generator.Extensions;
 using Majipro.Converter.Generator.Generating;
 using Majipro.Converter.Generator.Receivers;
 using Majipro.Converter.Generator.Rules;
@@ -80,9 +81,28 @@ internal class ConverterGenerator : ISourceGenerator
             queue.Suppress(implemented);
         }
 
-        foreach (var requested in new ConvertCallSites(semantics, receiver).Pairs())
+        var callSites = new ConvertCallSites(semantics, receiver);
+        var genericCallSites = new GenericCallSites(semantics, callSites, receiver.Invocations);
+
+        foreach (var requested in callSites.Pairs())
         {
             queue.Request(requested);
+        }
+
+        foreach (var requested in genericCallSites.Pairs())
+        {
+            queue.Request(requested);
+        }
+
+        foreach (var unresolved in genericCallSites.Unresolved)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                ConverterDiagnostics.UnresolvedGenericConversion,
+                unresolved.CallSite.Node.GetLocation(),
+                unresolved.CallSite.Pair.From.ToReadableName(),
+                unresolved.CallSite.Pair.To.ToReadableName(),
+                unresolved.Method?.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat) ??
+                unresolved.CallSite.Node.ToString()));
         }
 
         foreach (var pair in queue.Travel())
