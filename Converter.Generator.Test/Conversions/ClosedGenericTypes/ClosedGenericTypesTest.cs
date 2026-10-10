@@ -37,7 +37,8 @@ public class ClosedGenericTypesTest : ConversionTestBase<ClosedGenericTypesCompo
             3,
             GeneratedSources.Count,
             "The wrapper, the payload it is closed over and the class holding both are expected, " +
-            "and nothing for the call site closed over a type parameter.");
+            "and nothing more for the call site closed over a type parameter, whose caller closes it " +
+            "over the pair the wrapper already asks for.");
     }
 
     [TestMethod]

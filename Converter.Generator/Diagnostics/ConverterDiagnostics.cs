@@ -52,4 +52,21 @@ internal static class ConverterDiagnostics
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// A call site that names a type parameter, and no call closing it was found in the compilation:
+    /// the method is reached some other way than by its name (a delegate, a base or an interface
+    /// member, another assembly), or not at all. Which pair it asks for is decided only at runtime, so
+    /// nothing could be generated for it and nothing can say whether a converter exists. A warning
+    /// rather than an error, since a converter written by hand may well answer every pair it is ever
+    /// called with - raise it with <c>dotnet_diagnostic.MC0005.severity = error</c> where that is
+    /// not good enough.
+    /// </summary>
+    internal static readonly DiagnosticDescriptor UnresolvedGenericConversion = new DiagnosticDescriptor(
+        "MC0005",
+        "Generic conversion is not resolved at compile time",
+        "Conversion '{0}' to '{1}' names a type parameter and no call of '{2}' closing it was found, so no converter is generated for it and the conversion may fail at runtime",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 }

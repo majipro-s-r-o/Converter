@@ -1,9 +1,13 @@
+using System.Linq;
+using Microsoft.CodeAnalysis;
+
 namespace Majipro.Converter.Generator.Test.Conversions.GenericCallSite;
 
 /// <summary>
-/// A generic method handing its own type parameter to the converting service. Nothing can be
-/// generated for such a pair - <c>TFrom</c> means something only inside the method it belongs to -
-/// and writing a converter that names it would break the build of the consuming project.
+/// A generic method handing its own type parameter to the converting service, and nothing calling
+/// it. Nothing can be generated for such a pair - <c>TFrom</c> means something only inside the method
+/// it belongs to, and writing a converter that names it would break the build of the consuming
+/// project - so the call site is reported as a warning, and the rest is still generated.
 /// </summary>
 [TestClass]
 public class GenericCallSiteTest : ConversionTestBase<GenericCallSiteComposition>
@@ -14,10 +18,19 @@ public class GenericCallSiteTest : ConversionTestBase<GenericCallSiteComposition
     }
 
     [TestMethod]
-    public void WhenGeneratorRunsThenThereAreNoDiagnostics()
+    public void WhenNothingClosesTheCallSiteThenAWarningIsReported()
     {
-        AssertGeneratedWithoutDiagnostics();
+        var diagnostic = Diagnostic.Single();
 
+        Assert.AreEqual("MC0005", diagnostic.Id);
+        Assert.AreEqual(DiagnosticSeverity.Warning, diagnostic.Severity);
+        StringAssert.Contains(diagnostic.GetMessage(), nameof(GenericCallSiteComposition.ConvertToString));
+        Assert.IsTrue(diagnostic.Location.IsInSource, "The warning is expected on the call site.");
+    }
+
+    [TestMethod]
+    public void WhenGeneratorRunsThenOnlyThePairWhoseTypesAreWrittenOutIsGenerated()
+    {
         Assert.AreEqual(
             1,
             GeneratedSources.Count,
@@ -27,8 +40,6 @@ public class GenericCallSiteTest : ConversionTestBase<GenericCallSiteComposition
     [TestMethod]
     public void WhenACallSiteIsGenericThenItIsSkippedAndTheRestIsStillGenerated()
     {
-        AssertGeneratedWithoutDiagnostics();
-
         var from = new GenericCallSiteTestCase.From
         {
             Property = "hello"

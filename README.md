@@ -343,8 +343,9 @@ Generation is recursive: a property whose type is itself a mappable pair is conv
 | --- | --- | --- |
 | Property of the same type | `string` to `string` | Also implicit conversions — `Guid` to `Guid?`, `int` to `long`, differing nullable annotations |
 | Nested objects | `Address` to `AddressDto` | Converted through `IConvertingService`, the nested pair is generated as well |
-| Closed generic types | `Wrapper<Guid, Person>` to `Wrapper<Guid, PersonDto>` | Mapped like any other class. The type arguments have to be types — the same wrapper closed over a type parameter of the method calling `Convert` is skipped, see below |
+| Closed generic types | `Wrapper<Guid, Person>` to `Wrapper<Guid, PersonDto>` | Mapped like any other class. The same wrapper closed over a type parameter of the method calling `Convert` is a generic call site, see the next row |
 | A pair the compiler already takes | `IProducer<Dog>` to `IProducer<Animal>` (`out T`), `IConsumer<Animal>` to `IConsumer<Dog>` (`in T`), `int` to `long`, `int` to `int?` | Variance, an implicit reference or numeric conversion, an implicit operator of your own — the Converter hands the value back. A pair that can *also* be mapped property by property is mapped into a new instance instead |
+| Generic call sites | `Convert<TKind, KindDto>(kind)` inside `Build<TKind>(...)` | Not a pair by itself — the pairs are what the callers of `Build` close it over, type arguments inferred or written out, through any number of generic methods handing the type parameter on, extension methods and the type a method is called on (`new Mapper<Kind>().Map(...)`) included. Each of those is generated (or refused) like a pair written out. When no call closing it is found in the compilation, it is `MC0005`, see below |
 | Collections | `List<Address>` to `List<AddressDto>` | Source is any `IEnumerable<T>`, target is `IEnumerable<>`, `ICollection<>`, `IList<>`, `IReadOnlyCollection<>`, `IReadOnlyList<>` or `List<>` |
 | Scalar to its text | `int` to `string`, `DateTime` to `string` | Written as `System.Convert.ToString` |
 | Text to a scalar | `string` to `int` | Only for the build in Converters listed above, so `FormatProvider` and the other options apply |
@@ -363,8 +364,9 @@ The generator never guesses. When it recognizes a pair but can not write it dete
 | `MC0003` | A writable target property has nothing to fill it — the source has no property of that name, or the two types are not convertible |
 | `MC0004` | The pair itself can not be written, and no Converter for it is implemented in this assembly or in any assembly it references — the `Convert` call would compile and throw at runtime, so it fails the build instead |
 | `MC0001` | Anything else that went wrong while generating |
+| `MC0005` | **Warning.** A `Convert` call names a type parameter and no call closing it was found in the compilation — the method is reached through an interface, a base class, a delegate or from another assembly. Nothing is generated for it and nothing can tell whether a Converter exists for the pairs it asks for at runtime. Write those Converters yourself, or raise it to an error with `dotnet_diagnostic.MC0005.severity = error` |
 
-A pair you ask for always ends one of three ways, and never in silence: a Converter is generated for it, one you wrote or one the library ships answers it, or the build fails. The two exceptions are a pair whose sides are the same type, which `IConvertingService` handles by itself, and a call site whose type is a generic type parameter, which is not a pair until the method is used.
+A pair you ask for always ends one of three ways, and never in silence: a Converter is generated for it, one you wrote or one the library ships answers it, or the build fails. The two exceptions are a pair whose sides are the same type, which `IConvertingService` handles by itself, and a generic call site no caller closes in the compilation, which is `MC0005` — a warning, since the pairs it will be called with may well have Converters in the assembly that calls it.
 
 One shape ends on `MC0003` for a reason that is not really about the property it names: a generic type constructed over itself, a `Node<T>` whose property is a `Node<Node<T>>`, asks for a bigger Converter without end. Names whose type arguments nest deeper than eight are not mapped, so such a property is reported as one nothing fills rather than being generated forever.
 
@@ -430,7 +432,7 @@ builder.Services.AddConverting<MyClass>();
 ## Troubleshooting
 | What you see | What it means |
 | --- | --- |
-| `There is no conversion from 'X' to 'Y'` at runtime | Nothing is registered for the pair. The generator reports the pairs it can see as `MC0004` at build time, so what is left is what it can not see: the assembly holding the Converter was not passed to `AddConverting`, or the call site is generic (a type parameter is not a pair until the method is used) |
+| `There is no conversion from 'X' to 'Y'` at runtime | Nothing is registered for the pair. The generator reports the pairs it can see as `MC0004` at build time, so what is left is what it can not see: the assembly holding the Converter was not passed to `AddConverting`, or the call site is generic and reached in a way the generator does not follow, which is `MC0005` |
 | `Duplicate converter registrations found` at startup | Two classes claim the same `From -> To` pair. A Reference Converter and the `IConverter` it extends are one registration and are not this |
 | `MC0002`, `MC0003`, `MC0004` at build time | The generator refuses the pair, see [What it refuses](#what-it-refuses). Write the Converter yourself, as a class — in this assembly or in one it references |
 | The generated Converter is not found at runtime | It is generated into the assembly holding the call site, so that assembly has to be one of the ones you hand to `AddConverting` |

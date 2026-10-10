@@ -185,6 +185,45 @@ internal static class TypeSymbolExtensions
     }
 
     /// <summary>
+    /// The name stays within <see cref="MaxTypeArgumentDepth"/>. Asked by whoever builds names rather
+    /// than finds them - substituting the type arguments of a generic call site can grow a name the
+    /// same way a type nested in itself does, and needs the same bound to end.
+    /// </summary>
+    internal static bool IsWithinTypeArgumentDepth(this ITypeSymbol type)
+    {
+        return type.GetTypeArgumentDepth() <= MaxTypeArgumentDepth;
+    }
+
+    /// <summary>
+    /// A type parameter appears anywhere in the name: it is one, it is the element of an array, or it
+    /// is an argument of the type or of anything the type is nested in.
+    /// </summary>
+    internal static bool ContainsTypeParameter(this ITypeSymbol type)
+    {
+        switch (type)
+        {
+            case ITypeParameterSymbol:
+                return true;
+            case IArrayTypeSymbol array:
+                return array.ElementType.ContainsTypeParameter();
+            case IPointerTypeSymbol pointer:
+                return pointer.PointedAtType.ContainsTypeParameter();
+            case INamedTypeSymbol named:
+                for (var current = named; current != null; current = current.ContainingType)
+                {
+                    if (current.TypeArguments.Any(a => a.ContainsTypeParameter()))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
     /// How deeply the type arguments of a name are nested: <c>Person</c> is none,
     /// <c>Wrapper&lt;Person&gt;</c> is one, <c>Wrapper&lt;Wrapper&lt;Person&gt;&gt;</c> is two. Every
     /// part of the name counts, the arguments of what it is nested in included.
