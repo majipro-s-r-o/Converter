@@ -14,14 +14,14 @@ public sealed class StringToFloatConverterTests : ConversionTestBase
     public async Task WhenInputIsCanBeFloatThenReturnFloatOtherwiseDefault(string source, NumberStyles numberStyles, string culture, float expected)
     {
         // Arrange
-        await ClassInitializeAsync(o =>
+        var convertingService = await CreateConvertingServiceAsync(o =>
         {
             o.NumberStyles = numberStyles;
             o.FormatProvider = new CultureInfo(culture);
         });
         
         // Act
-        var actual = ConvertingService.Convert<string, float>(source);
+        var actual = convertingService.Convert<string, float>(source);
         
         // Assert
         Assert.AreEqual(expected, actual);

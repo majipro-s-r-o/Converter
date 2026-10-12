@@ -16,13 +16,13 @@ public sealed class StringToDateTimeConverterTests : ConversionTestBase
     public async Task WhenInputIsCanBeDateTimeThenReturnDateTimeOtherwiseDefault(string source, DateTimeStyles dateTimeStyles, string expected)
     {
         // Arrange
-        await ClassInitializeAsync(o =>
+        var convertingService = await CreateConvertingServiceAsync(o =>
         {
             o.DateTimeStyles = dateTimeStyles;
         });
         
         // Act
-        var actual = ConvertingService.Convert<string, DateTime>(source);
+        var actual = convertingService.Convert<string, DateTime>(source);
         
         // Assert
         var expectedDateTime = DateTime.Parse(expected, CultureInfo.InvariantCulture);
