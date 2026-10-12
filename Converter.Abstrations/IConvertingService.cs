@@ -13,6 +13,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     TTo Convert<TFrom, TTo>(TFrom from);
 
     /// <summary>
@@ -23,6 +24,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<TTo> ConvertAsync<TFrom, TTo>(TFrom from, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -33,6 +35,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     TTo Convert<TFrom, TTo>(TFrom from, TTo to);
 
     /// <summary>
@@ -44,6 +47,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<TTo> ConvertAsync<TFrom, TTo>(TFrom from, TTo to, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -54,6 +58,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ISet<TTo> Convert<TFrom, TTo>(ISet<TFrom> from, Func<ISet<TTo>> nullFallback);
 
     /// <summary>
@@ -65,6 +70,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<ISet<TTo>> ConvertAsync<TFrom, TTo>(ISet<TFrom> from, Func<ISet<TTo>> nullFallback, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -74,6 +80,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ISet<TTo> Convert<TFrom, TTo>(ISet<TFrom> from);
 
     /// <summary>
@@ -84,6 +91,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<ISet<TTo>> ConvertAsync<TFrom, TTo>(ISet<TFrom> from, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -94,6 +102,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     IList<TTo> Convert<TFrom, TTo>(IList<TFrom> from, Func<IList<TTo>> nullFallback);
 
     /// <summary>
@@ -105,6 +114,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<IList<TTo>> ConvertAsync<TFrom, TTo>(IList<TFrom> from, Func<IList<TTo>> nullFallback, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -114,6 +124,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     IList<TTo> Convert<TFrom, TTo>(IList<TFrom> from);
 
     /// <summary>
@@ -124,6 +135,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<IList<TTo>> ConvertAsync<TFrom, TTo>(IList<TFrom> from, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -134,6 +146,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     IEnumerable<TTo> Convert<TFrom, TTo>(IEnumerable<TFrom> from, Func<IEnumerable<TTo>> nullFallback);
 
     /// <summary>
@@ -145,6 +158,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<IEnumerable<TTo>> ConvertAsync<TFrom, TTo>(IEnumerable<TFrom> from, Func<IEnumerable<TTo>> nullFallback, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -154,6 +168,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     IEnumerable<TTo> Convert<TFrom, TTo>(IEnumerable<TFrom> from);
 
     /// <summary>
@@ -164,6 +179,7 @@ public interface IConvertingService
     /// <typeparam name="TFrom">Source type.</typeparam>
     /// <typeparam name="TTo">Target type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     ValueTask<IEnumerable<TTo>> ConvertAsync<TFrom, TTo>(IEnumerable<TFrom> from, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -176,6 +192,8 @@ public interface IConvertingService
     /// <typeparam name="TFromValue">Source value type.</typeparam>
     /// <typeparam name="TToValue">Target value type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFromKey), nameof(TToKey))]
+    [RequiresConverter(nameof(TFromValue), nameof(TToValue))]
     IDictionary<TToKey, TToValue> Convert<TFromKey, TFromValue, TToKey, TToValue>(IDictionary<TFromKey, TFromValue> from, Func<IDictionary<TToKey, TToValue>> nullFallback);
 
     /// <summary>
@@ -189,6 +207,8 @@ public interface IConvertingService
     /// <typeparam name="TFromValue">Source value type.</typeparam>
     /// <typeparam name="TToValue">Target value type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFromKey), nameof(TToKey))]
+    [RequiresConverter(nameof(TFromValue), nameof(TToValue))]
     ValueTask<IDictionary<TToKey, TToValue>> ConvertAsync<TFromKey, TFromValue, TToKey, TToValue>(IDictionary<TFromKey, TFromValue> from, Func<IDictionary<TToKey, TToValue>> nullFallback, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -200,6 +220,8 @@ public interface IConvertingService
     /// <typeparam name="TFromValue">Source value type.</typeparam>
     /// <typeparam name="TToValue">Target value type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFromKey), nameof(TToKey))]
+    [RequiresConverter(nameof(TFromValue), nameof(TToValue))]
     IDictionary<TToKey, TToValue> Convert<TFromKey, TFromValue, TToKey, TToValue>(IDictionary<TFromKey, TFromValue> from);
 
     /// <summary>
@@ -212,5 +234,7 @@ public interface IConvertingService
     /// <typeparam name="TFromValue">Source value type.</typeparam>
     /// <typeparam name="TToValue">Target value type.</typeparam>
     /// <returns>Result of conversion.</returns>
+    [RequiresConverter(nameof(TFromKey), nameof(TToKey))]
+    [RequiresConverter(nameof(TFromValue), nameof(TToValue))]
     ValueTask<IDictionary<TToKey, TToValue>> ConvertAsync<TFromKey, TFromValue, TToKey, TToValue>(IDictionary<TFromKey, TFromValue> from, CancellationToken cancellationToken = default);
 }

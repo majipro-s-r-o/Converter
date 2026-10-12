@@ -69,4 +69,18 @@ internal static class ConverterDiagnostics
         Category,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// A <c>RequiresConverterAttribute</c> naming something the method it is put on has no type
+    /// parameter of. It is written as a string, and <c>nameof</c> only guards it where somebody used
+    /// it, so a typo is possible - and ignoring it would leave the call to compile and then throw at
+    /// runtime about a conversion nobody generated, which is what the attribute exists to prevent.
+    /// </summary>
+    internal static readonly DiagnosticDescriptor RequiresConverterWithoutTypeParameter = new DiagnosticDescriptor(
+        "MC0006",
+        "Converter requirement names no type parameter",
+        "'{0}' requires a converter from '{1}' to '{2}', and '{3}' is not a type parameter of it",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

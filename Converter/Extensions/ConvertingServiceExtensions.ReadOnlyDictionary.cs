@@ -7,24 +7,28 @@ namespace Majipro.Converter.Extensions;
 
 public static partial class ConvertingServiceExtensions
 {
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     public static IReadOnlyDictionary<string, TTo> ConvertExplicitly<TFrom, TTo>(this IConvertingService convertingService, IReadOnlyDictionary<string, TFrom> from, Func<Dictionary<string, TTo>> nullFallback)
     {
         return (IReadOnlyDictionary<string, TTo>)convertingService
             .Convert<string, TFrom, string, TTo>(from.ToDictionary(kvp => kvp.Key, kvp => kvp.Value), nullFallback);
     }
     
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     public static IReadOnlyDictionary<string, TTo> ConvertExplicitly<TFrom, TTo>(this IConvertingService convertingService, IReadOnlyDictionary<string, TFrom> from)
     {
         return (IReadOnlyDictionary<string, TTo>)convertingService
             .Convert<string, TFrom, string, TTo>(from.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
     }
     
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     public static IReadOnlyDictionary<int, TTo> ConvertExplicitly<TFrom, TTo>(this IConvertingService convertingService, IReadOnlyDictionary<int, TFrom> from, Func<Dictionary<int, TTo>> nullFallback)
     {
         return (IReadOnlyDictionary<int, TTo>)convertingService
             .Convert<int, TFrom, int, TTo>(from.ToDictionary(kvp => kvp.Key, kvp => kvp.Value), nullFallback);
     }
     
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     public static IReadOnlyDictionary<Guid, TTo> ConvertExplicitly<TFrom, TTo>(this IConvertingService convertingService, IReadOnlyDictionary<Guid, TFrom> from, Func<Dictionary<Guid, TTo>> nullFallback)
     {
         return (IReadOnlyDictionary<Guid, TTo>)convertingService
