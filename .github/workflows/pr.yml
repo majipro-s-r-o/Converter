@@ -1,14 +1,31 @@
 name: Pull Request Validation
 
+# This workflow reports whether a pull request builds and passes its tests. What stops a failing one
+# from being merged is the ruleset on `main` that lists the job below as a required status check -
+# a workflow can not block a merge on its own. The check is called by the job's `name`, so renaming
+# the job means updating the ruleset too, or the requirement waits for a check that never reports.
+
 on:
     pull_request:
         branches: [ main ]
+    # Lets the same check gate a merge queue, should one be enabled on main.
+    merge_group:
+
+# A new push to a pull request makes the run for the previous commit pointless.
+concurrency:
+    group: pr-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
     build:
-        
+        name: Build and test
+
         runs-on: ubuntu-latest
-        
+
+        # A generation that never ends has happened before (a generic type nesting itself), and a
+        # required check that hangs blocks every pull request until GitHub's six hour limit.
+        timeout-minutes: 20
+
         steps:
             -   uses: actions/checkout@v4
                 with:
@@ -29,5 +46,7 @@ jobs:
             -   name: Build
                 run: dotnet build --configuration Release --no-restore
 
+            # The same Release build that was just compiled. Without --configuration the tests would
+            # build and run Debug, which is not what gets packed.
             -   name: Test
-                run: dotnet test --no-restore --verbosity normal
+                run: dotnet test --configuration Release --no-build --verbosity normal

@@ -15,13 +15,13 @@ public sealed class StringToDateTimeOffsetConverterTests : ConversionTestBase
     public async Task WhenInputIsCanBeDateTimeOffsetThenReturnDateTimeOffsetOtherwiseDefault(string source, DateTimeStyles dateTimeStyles, string expected)
     {
         // Arrange
-        await ClassInitializeAsync(o =>
+        var convertingService = await CreateConvertingServiceAsync(o =>
         {
             o.DateTimeStyles = dateTimeStyles;
         });
         
         // Act
-        var actual = ConvertingService.Convert<string, DateTimeOffset>(source);
+        var actual = convertingService.Convert<string, DateTimeOffset>(source);
         
         // Assert
         var expectedDateTime = DateTimeOffset.Parse(expected, CultureInfo.InvariantCulture);

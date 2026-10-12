@@ -14,14 +14,14 @@ public class StringToDoubleConverterTests : ConversionTestBase
     public async Task WhenInputIsCanBeDoubleThenReturnDoubleOtherwiseDefault(string source, NumberStyles numberStyles, string culture, double expected)
     {
         // Arrange
-        await ClassInitializeAsync(o =>
+        var convertingService = await CreateConvertingServiceAsync(o =>
         {
             o.NumberStyles = numberStyles;
             o.FormatProvider = new CultureInfo(culture);
         });
         
         // Act
-        var actual = ConvertingService.Convert<string, double>(source);
+        var actual = convertingService.Convert<string, double>(source);
         
         // Assert
         Assert.AreEqual(expected, actual);

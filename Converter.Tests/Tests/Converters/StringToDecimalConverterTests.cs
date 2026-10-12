@@ -14,14 +14,14 @@ public sealed class StringToDecimalConverterTests : ConversionTestBase
     public async Task WhenInputIsCanBeDecimalThenReturnDecimalOtherwiseDefault(string source, NumberStyles numberStyles, string culture, double expected)
     {
         // Arrange
-        await ClassInitializeAsync(o =>
+        var convertingService = await CreateConvertingServiceAsync(o =>
         {
             o.NumberStyles = numberStyles;
             o.FormatProvider = new CultureInfo(culture);
         });
         
         // Act
-        var actual = ConvertingService.Convert<string, decimal>(source);
+        var actual = convertingService.Convert<string, decimal>(source);
         
         // Assert
         Assert.AreEqual((decimal)expected, actual);
