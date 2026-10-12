@@ -7,6 +7,7 @@ namespace Majipro.Converter.Extensions;
 
 public static partial class ConvertingServiceExtensions
 {
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     public static List<TTo> ConvertExplicitly<TFrom, TTo>(this IConvertingService convertingService, List<TFrom> from, Func<List<TTo>> nullFallback)
     {
         return convertingService
@@ -14,6 +15,7 @@ public static partial class ConvertingServiceExtensions
             .ToList();
     }
     
+    [RequiresConverter(nameof(TFrom), nameof(TTo))]
     public static List<TTo> ConvertExplicitly<TFrom, TTo>(this IConvertingService convertingService, List<TFrom> from)
     {
         return convertingService

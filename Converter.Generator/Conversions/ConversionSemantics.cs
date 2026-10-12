@@ -60,6 +60,13 @@ internal sealed class ConversionSemantics
     public INamedTypeSymbol? ReferenceConverterInterface { get; }
 
     /// <summary>
+    /// <c>RequiresConverterAttribute</c>: what a method says about the converters calling it asks for.
+    /// Every method of <c>IConvertingService</c> carries it, which is how the generator knows what
+    /// they ask for without naming them, and so can any method somebody else writes.
+    /// </summary>
+    public INamedTypeSymbol? RequiresConverterAttribute { get; }
+
+    /// <summary>
     /// The assemblies a converter written by hand can live in: the one being compiled and every
     /// referenced assembly that references the abstractions. <c>DiCompositor.AddConverting</c>
     /// finds converters by reflecting over the assemblies it is handed, so a converter in a class
@@ -73,7 +80,7 @@ internal sealed class ConversionSemantics
     /// <summary>
     /// Majipro.Converter.Abstrations is referenced, so there is something to generate at all.
     /// </summary>
-    public bool IsAvailable => ConvertingService != null && ConverterInterface != null;
+    public bool IsAvailable => ConvertingService != null && ConverterInterface != null && RequiresConverterAttribute != null;
 
     public ConversionSemantics(Compilation compilation)
     {
@@ -84,6 +91,7 @@ internal sealed class ConversionSemantics
         ConverterInterface = GetTypeSymbol(compilation, typeof(IConverter<,>));
         AsyncConverterInterface = GetTypeSymbol(compilation, typeof(IAsyncConverter<,>));
         ReferenceConverterInterface = GetTypeSymbol(compilation, typeof(IReferenceConverter<,>));
+        RequiresConverterAttribute = GetTypeSymbol(compilation, typeof(RequiresConverterAttribute));
 
         _enumerable = GetTypeSymbol(compilation, typeof(IEnumerable<>));
 
@@ -321,6 +329,33 @@ internal sealed class ConversionSemantics
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// What every type parameter stands for in this one call: the method's own, and those of every
+    /// type it is a member of.
+    /// </summary>
+    public static IReadOnlyDictionary<ITypeParameterSymbol, ITypeSymbol> GetTypeArguments(IMethodSymbol called)
+    {
+        var arguments = new Dictionary<ITypeParameterSymbol, ITypeSymbol>(SymbolEqualityComparer.Default);
+        var parameters = called.OriginalDefinition.TypeParameters;
+
+        for (var i = 0; i < parameters.Length && i < called.TypeArguments.Length; i++)
+        {
+            arguments[parameters[i]] = called.TypeArguments[i];
+        }
+
+        for (var type = called.ContainingType; type != null; type = type.ContainingType)
+        {
+            var typeParameters = type.OriginalDefinition.TypeParameters;
+
+            for (var i = 0; i < typeParameters.Length && i < type.TypeArguments.Length; i++)
+            {
+                arguments[typeParameters[i]] = type.TypeArguments[i];
+            }
+        }
+
+        return arguments;
     }
 
     public SemanticModel GetSemanticModel(SyntaxTree syntaxTree)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Majipro.Converter.Generator.Conversions;
 using Majipro.Converter.Generator.Extensions;
+using Majipro.Converter.Generator.Receivers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -26,7 +27,9 @@ namespace Majipro.Converter.Generator.Sources;
 /// group handed over as a delegate, an override reached through its base, an interface implementation
 /// reached through the interface, or a public method called from another assembly. A call site none of
 /// whose pairs could be found is what <see cref="Unresolved"/> is - its conversion is decided only at
-/// runtime, and nothing here can say whether there is a converter for it.
+/// runtime, and nothing here can say whether there is a converter for it - unless the method it is
+/// written in says it requires that very pair with <c>RequiresConverterAttribute</c>, which hands the
+/// question to its callers wherever they are, so the call site is not unresolved at all.
 /// </para>
 /// </remarks>
 internal sealed class GenericCallSites : IPairSource
@@ -83,7 +86,7 @@ internal sealed class GenericCallSites : IPairSource
                 }
             }
 
-            if (resolved == false)
+            if (resolved == false && (owner == null || _callSites.IsRequiredBy(owner, callSite.Pair) == false))
             {
                 _unresolved.Add((callSite, owner));
             }
@@ -110,7 +113,7 @@ internal sealed class GenericCallSites : IPairSource
 
             foreach (var invocation in GetInvocationsOf(method))
             {
-                var arguments = GetTypeArguments(invocation.Method);
+                var arguments = ConversionSemantics.GetTypeArguments(invocation.Method);
                 var from = _semantics.Substitute(current.From, arguments);
                 var to = _semantics.Substitute(current.To, arguments);
 
@@ -206,7 +209,7 @@ internal sealed class GenericCallSites : IPairSource
 
         foreach (var invocation in _invocations)
         {
-            var name = GetCalledName(invocation.Expression);
+            var name = InvocationsSyntaxReceiver.GetCalledName(invocation);
 
             if (name == null)
             {
@@ -223,49 +226,6 @@ internal sealed class GenericCallSites : IPairSource
         }
 
         return _invocationsByName;
-    }
-
-    /// <summary>
-    /// The name an invocation calls by: <c>Build(...)</c>, <c>Build&lt;T&gt;(...)</c>,
-    /// <c>this.Build(...)</c>, <c>x?.Build(...)</c>. Anything else - a delegate held in a variable
-    /// being invoked, for instance - calls no method by name.
-    /// </summary>
-    private static string? GetCalledName(ExpressionSyntax expression)
-    {
-        return expression switch
-        {
-            SimpleNameSyntax name => name.Identifier.ValueText,
-            MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.ValueText,
-            MemberBindingExpressionSyntax memberBinding => memberBinding.Name.Identifier.ValueText,
-            _ => null
-        };
-    }
-
-    /// <summary>
-    /// What every type parameter stands for in this one call: the method's own, and those of every
-    /// type it is a member of.
-    /// </summary>
-    private static IReadOnlyDictionary<ITypeParameterSymbol, ITypeSymbol> GetTypeArguments(IMethodSymbol called)
-    {
-        var arguments = new Dictionary<ITypeParameterSymbol, ITypeSymbol>(SymbolEqualityComparer.Default);
-        var parameters = called.OriginalDefinition.TypeParameters;
-
-        for (var i = 0; i < parameters.Length && i < called.TypeArguments.Length; i++)
-        {
-            arguments[parameters[i]] = called.TypeArguments[i];
-        }
-
-        for (var type = called.ContainingType; type != null; type = type.ContainingType)
-        {
-            var typeParameters = type.OriginalDefinition.TypeParameters;
-
-            for (var i = 0; i < typeParameters.Length && i < type.TypeArguments.Length; i++)
-            {
-                arguments[typeParameters[i]] = type.TypeArguments[i];
-            }
-        }
-
-        return arguments;
     }
 
     /// <summary>

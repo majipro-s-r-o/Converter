@@ -29,12 +29,12 @@ internal class ConverterGenerator : ISourceGenerator
 {
     public void Initialize(GeneratorInitializationContext context)
     {
-        context.RegisterForSyntaxNotifications(() => new ConvertCallsSyntaxReceiver());
+        context.RegisterForSyntaxNotifications(() => new InvocationsSyntaxReceiver());
     }
 
     public void Execute(GeneratorExecutionContext context)
     {
-        if (context.SyntaxReceiver is not ConvertCallsSyntaxReceiver receiver)
+        if (context.SyntaxReceiver is not InvocationsSyntaxReceiver receiver)
         {
             return;
         }
@@ -63,7 +63,7 @@ internal class ConverterGenerator : ISourceGenerator
         }
     }
 
-    private static void ExecuteInternal(GeneratorExecutionContext context, ConvertCallsSyntaxReceiver receiver)
+    private static void ExecuteInternal(GeneratorExecutionContext context, InvocationsSyntaxReceiver receiver)
     {
         var semantics = new ConversionSemantics(context.Compilation);
 
