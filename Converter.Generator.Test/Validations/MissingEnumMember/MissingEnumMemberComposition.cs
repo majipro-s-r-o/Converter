@@ -5,7 +5,7 @@ namespace Majipro.Converter.Generator.Test.Validations.MissingEnumMember;
 
 /// <summary>
 /// A conversion the generator refuses: <c>Wide.Active</c> has no counterpart in <c>Narrow</c>.
-/// It is a compilation of its own, because the error ends the whole generation pass.
+/// It is a compilation of its own, so the error it is about is the only one reported.
 /// </summary>
 public class MissingEnumMemberComposition : TestCompositionBase
 {

@@ -436,6 +436,8 @@ The generator never guesses. When it recognizes a pair but can not write it dete
 
 The errors apply to pairs found through a generic call site the same way as to pairs written out, so a generic helper is no way around them.
 
+One build reports every pair it refuses. A refused pair ends that pair only — the generator carries on with the rest, so three missing Converters are three errors at once, not three rounds of fix and rebuild. `MC0006` is the exception: it is about the attribute rather than a pair, and it stops the generation where it is found.
+
 A pair you ask for always ends one of three ways, and never in silence: a Converter is generated for it, one you wrote or one the library ships answers it, or the build fails. The two exceptions are a pair whose sides are the same type, which `IConvertingService` handles by itself, and a generic call site whose callers the generator can not see, which is `MC0005`. That one is a warning because the pairs it is called with may well have Converters in the assembly that calls it. If they do, turn it off for that project. If you want it enforced, make it an error. Either way it goes in `.editorconfig`:
 ```ini
 [*.cs]

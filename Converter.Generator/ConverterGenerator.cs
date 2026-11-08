@@ -46,8 +46,9 @@ internal class ConverterGenerator : ISourceGenerator
         }
         catch (ConversionException e)
         {
-            // A conversion that can not be written deterministically. The generation is over, and
-            // the error stops the build - which is the point, the pair has to be dealt with by hand.
+            // What is left to reach here is a call site that names no conversion at all (MC0006) -
+            // a refused pair is reported where it is travelled. The generation is over, and the
+            // error stops the build.
             context.ReportDiagnostic(Diagnostic.Create(
                 e.Descriptor,
                 Location.None,
@@ -129,9 +130,22 @@ internal class ConverterGenerator : ISourceGenerator
 
         foreach (var pair in queue.Travel())
         {
-            foreach (var source in emitter.Emit(pair))
+            try
             {
-                context.AddSource(source.FileName, source.Text);
+                foreach (var source in emitter.Emit(pair))
+                {
+                    context.AddSource(source.FileName, source.Text);
+                }
+            }
+            catch (ConversionException e)
+            {
+                // A pair that can not be written deterministically fails the build, but only that
+                // pair: the rest are still travelled, so every pair that has to be dealt with by hand
+                // is reported in one build instead of one per build.
+                context.ReportDiagnostic(Diagnostic.Create(
+                    e.Descriptor,
+                    Location.None,
+                    e.MessageArguments));
             }
         }
     }
