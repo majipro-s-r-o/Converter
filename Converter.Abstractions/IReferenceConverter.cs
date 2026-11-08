@@ -1,4 +1,4 @@
-﻿namespace Majipro.Converter.Abstrations;
+﻿namespace Majipro.Converter.Abstractions;
 
 /// <summary>
 /// Reference Converter between <see cref="TFrom"/> and <see cref="TTo"/>.

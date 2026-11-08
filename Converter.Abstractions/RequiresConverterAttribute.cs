@@ -1,6 +1,6 @@
 using System;
 
-namespace Majipro.Converter.Abstrations;
+namespace Majipro.Converter.Abstractions;
 
 /// <summary>
 /// Calling the method this is put on asks the converting service for a converter between two of the

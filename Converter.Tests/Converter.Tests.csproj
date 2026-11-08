@@ -17,7 +17,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Converter\Converter.csproj" />
-      <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" />
+      <ProjectReference Include="..\Converter.Abstractions\Converter.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>

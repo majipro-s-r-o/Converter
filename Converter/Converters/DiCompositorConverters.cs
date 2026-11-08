@@ -1,5 +1,5 @@
 using System;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

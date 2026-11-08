@@ -1,4 +1,4 @@
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using InjectService = Microsoft.AspNetCore.Components.InjectAttribute;
 using static Majipro.Converter.Generator.Razor.Test.Conversions.RazorInjectAttribute.RazorInjectAttributeTestCase;
 

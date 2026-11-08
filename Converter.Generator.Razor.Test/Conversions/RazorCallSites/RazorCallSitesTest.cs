@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Test.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;

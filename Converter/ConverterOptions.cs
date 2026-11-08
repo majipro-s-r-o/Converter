@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Majipro.Converter;

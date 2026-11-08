@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

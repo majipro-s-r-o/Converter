@@ -1,4 +1,4 @@
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 namespace Majipro.Converter.Tests.Mocks;
 
 internal sealed class SourceRefToTargetRefReferenceConverter : IReferenceConverter<SourceRef, TargetRef>

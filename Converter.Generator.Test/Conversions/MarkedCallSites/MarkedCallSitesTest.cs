@@ -46,7 +46,7 @@ public class MarkedCallSitesTest : ConversionTestBase<MarkedCallSitesComposition
     public void WhenAMarkedMethodIsCalledThenItsPairIsGenerated(Type from, Type to)
     {
         var converter = ServiceProvider.GetService(
-            typeof(Majipro.Converter.Abstrations.IConverter<,>).MakeGenericType(from, to));
+            typeof(Majipro.Converter.Abstractions.IConverter<,>).MakeGenericType(from, to));
 
         Assert.IsNotNull(converter, $"No converter for {from.Name} -> {to.Name}.");
     }
@@ -59,7 +59,7 @@ public class MarkedCallSitesTest : ConversionTestBase<MarkedCallSitesComposition
     public void WhenTheTypeParametersAreDeclaredInAnotherOrderThenThePairIsTakenByName()
     {
         var reverse = ServiceProvider.GetService(
-            typeof(Majipro.Converter.Abstrations.IConverter<MarkedCallSitesTestCase.ReferencedTo, MarkedCallSitesTestCase.ReferencedFrom>));
+            typeof(Majipro.Converter.Abstractions.IConverter<MarkedCallSitesTestCase.ReferencedTo, MarkedCallSitesTestCase.ReferencedFrom>));
 
         Assert.IsNull(reverse, "The pair is expected to be read by the names the attribute gives, not by position.");
     }

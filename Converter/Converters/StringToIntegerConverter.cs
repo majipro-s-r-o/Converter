@@ -1,4 +1,4 @@
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 namespace Majipro.Converter.Converters;
 
 internal sealed class StringToIntegerConverter : IConverter<string, int>

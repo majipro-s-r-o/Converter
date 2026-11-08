@@ -26,10 +26,10 @@
 
     <ItemGroup>
         <!-- The generator resolves the converter interfaces by their real types instead of by name,
-             so Majipro.Converter.Abstrations.dll has to sit next to this one in analyzers/dotnet/cs
+             so Majipro.Converter.Abstractions.dll has to sit next to this one in analyzers/dotnet/cs
              - Converter.csproj packs both. PrivateAssets keeps the reference from turning into a
              package dependency of anything. -->
-        <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\Converter.Abstractions\Converter.Abstractions.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Extensions;
 
 namespace Majipro.Converter.Tests.Tests;

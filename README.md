@@ -381,7 +381,7 @@ It does **not** follow a method reached through an interface or a base class mem
 ### Methods that convert
 A generic helper in a class library is the one shape above the generator can not follow: the application calling it is compiled separately, and it never sees the helper's body. Tell it what the helper asks for instead:
 ```csharp
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 
 public static class KindMapping
 {
@@ -520,6 +520,6 @@ builder.Services.AddConverting<MyClass>();
 This library is written with the help of Claude Code, and it is worth saying plainly which parts:
 
 - **`Converter.Generator` (the source generator) is largely AI-generated**, together with its test suite in `Converter.Generator.Test` and the architecture notes in `CLAUDE.md`. The design decisions are reviewed and owned by a human; a lot of the code writing them down is not hand typed.
-- **The runtime library** (`Converter`, `Converter.Abstrations`) is mostly hand written, with AI help in the build in Converters, tests and packaging.
+- **The runtime library** (`Converter`, `Converter.Abstractions`) is mostly hand written, with AI help in the build in Converters, tests and packaging.
 
 Everything is reviewed before it is merged and covered by tests, but treat that as context when reading the code or reporting a bug.

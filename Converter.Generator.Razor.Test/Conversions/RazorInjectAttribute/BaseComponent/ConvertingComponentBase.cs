@@ -1,4 +1,4 @@
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Microsoft.AspNetCore.Components;
 
 namespace Majipro.Converter.Generator.Razor.Test.Conversions.RazorInjectAttribute.BaseComponent

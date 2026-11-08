@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Test.Extensions;
 using Majipro.Converter.Generator.Test.Helpers;
 using Microsoft.CodeAnalysis;

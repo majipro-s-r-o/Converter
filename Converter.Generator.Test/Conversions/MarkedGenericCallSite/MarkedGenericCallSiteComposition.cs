@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Test;
 
 namespace Majipro.Converter.Generator.Test.Conversions.MarkedGenericCallSite;

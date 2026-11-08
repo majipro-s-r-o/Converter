@@ -1,5 +1,5 @@
 using System.Linq;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Diagnostics;
 using Majipro.Converter.Generator.Razor;
 using Majipro.Converter.Generator.Test.Helpers;
