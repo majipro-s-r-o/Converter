@@ -1,0 +1,16 @@
+@typeparam TItem
+
+<table>
+    @foreach (var item in Items)
+    {
+        <tr><td>@(Converter.Convert<TItem, string>(item))</td><td>@ChildContent(item)</td></tr>
+    }
+</table>
+
+@code {
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> ChildContent { get; set; }
+}

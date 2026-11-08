@@ -1,0 +1,58 @@
+@page "/people"
+@using Microsoft.AspNetCore.Components.Rendering
+@* A call in a comment asks for nothing: @(Converter.Convert<Person, IgnoredView>(Person)) *@
+
+<h1>@(Converter.Convert<Person, InlineView>(Person).Name)</h1>
+
+<p title="Converter.Convert<Person, IgnoredView>(Person)">Write to people@example.com, @@Converter is no call either.</p>
+
+<ul>
+    @foreach (var person in People)
+    {
+        <li>@(Converter.Convert<Person, LoopView>(person).Name)</li>
+    }
+</ul>
+
+<p>@Converter.Convert(People, () => new List<ImplicitView>())</p>
+
+@{
+    var block = Converter.Convert<Person, BlockView>(Person);
+    var text = "Converter.Convert<Person, IgnoredView>(Person) } <p>";
+}
+
+<p>@block.Name</p>
+
+<PersonCard Value="Converter.Convert<Person, AttributeView>(Person)" Title="A card of a person" />
+
+<Grid Items="People">
+    <ChildContent>@(Converter.Convert<Person, ContextView>(context).Name)</ChildContent>
+</Grid>
+
+<button class="btn" @onclick="() => Converter.Convert<Person, HandlerView>(Person)">Convert</button>
+
+@if (Person == null)
+{
+    <p>Nobody</p>
+}
+else
+{
+    @:@(Converter.Convert<Person, ElseView>(Person).Name) @Template
+}
+
+@code {
+    private CodeView Code => Converter.Convert<Person, CodeView>(Person);
+
+    private RenderFragment Template => @<p>@(Converter.Convert<Person, TemplateView>(Person).Name)</p>;
+
+    private void RenderRow(RenderTreeBuilder __builder, Person person)
+    {
+        if (person.Name.Length < 3)
+        {
+            return;
+        }
+
+        <tr>
+            <td>@(Converter.Convert<Person, MarkupInCodeView>(person).Name)</td>
+        </tr>
+    }
+}

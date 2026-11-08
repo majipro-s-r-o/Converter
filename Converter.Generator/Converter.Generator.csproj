@@ -34,5 +34,6 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Majipro.Converter.Generator.Test" />
+        <InternalsVisibleTo Include="Majipro.Converter.Generator.Razor.Test" />
     </ItemGroup>
 </Project>

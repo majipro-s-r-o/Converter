@@ -1,0 +1,18 @@
+@page "/orders"
+@inject IConvertingService Mapper
+
+<h1>@Ordered.Name</h1>
+
+@code {
+    private InjectedCodeView Ordered => Mapper.Convert<Person, InjectedCodeView>(Buyer);
+
+    private IList<InjectedInferredView> Buyers()
+    {
+        return Mapper.Convert(People, () => new List<InjectedInferredView>());
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var view = await Mapper.ConvertAsync<Person, InjectedAsyncView>(Buyer);
+    }
+}

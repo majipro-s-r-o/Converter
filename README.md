@@ -310,7 +310,7 @@ This means you can migrate converters from sync to async (or vice versa) without
 You do not have to write a Converter for every pair. The package ships a source generator that writes the obvious ones for you at compile time, and `AddConverting` picks them up the same way it picks up yours — they are ordinary classes in the assembly being compiled.
 
 ### How it works
-The generator looks at your `Convert` / `ConvertAsync` / `ConvertExplicitly` call sites, and at calls of any method of yours marked with `[RequiresConverter]` (see [Methods that convert](#methods-that-convert)): with the type arguments written out or inferred (`Convert(items, () => new List<Domain>())`), for single values, collections and dictionaries (whose keys are a pair of their own), including those written with a type parameter inside a generic method (see [Generic call sites](#generic-call-sites)). Every pair it finds that nobody wrote a Converter for gets one generated, in namespace `Majipro.Converter.Generated`:
+The generator looks at your `Convert` / `ConvertAsync` / `ConvertExplicitly` call sites — in C# and in Razor files (see [Razor files](#razor-files)) — and at calls of any method of yours marked with `[RequiresConverter]` (see [Methods that convert](#methods-that-convert)): with the type arguments written out or inferred (`Convert(items, () => new List<Domain>())`), for single values, collections and dictionaries (whose keys are a pair of their own), including those written with a type parameter inside a generic method (see [Generic call sites](#generic-call-sites)). Every pair it finds that nobody wrote a Converter for gets one generated, in namespace `Majipro.Converter.Generated`:
 ```csharp
 // You write this call, and nothing else
 var domain = _convertingService.Convert<Entity, Domain>(entity);
@@ -399,6 +399,28 @@ The attribute names the method's type parameters, the source first, and is read 
 
 Use `nameof`, so renaming a type parameter breaks the build instead of the attribute. It needs C# 11; on an older compiler write the names as strings, and a name the method has no type parameter of is the `MC0006` error. The attribute can name a type parameter of the method or of the class it is in, and it can sit on an interface member or an abstract or virtual method — a call written against the class implementing or overriding it is found all the same. The helper's own `Convert` call gets no `MC0005` in the library that declares it, as long as the pair it converts is the one the attribute names: the callers request that pair, wherever they are. One limit for now: both sides have to be type parameters, not concrete types.
 
+### Razor files
+Conversions written in `.razor` components and `.cshtml` views and pages are call sites like any other — in markup (`@(Converter.Convert<Person, PersonDto>(person))`), in `@code` / `@functions` blocks, in `@{ ... }` blocks and `@foreach` / `@if` bodies, in component parameters (`<PersonCard Person="Converter.Convert<Person, PersonDto>(person)" />`), in event handlers and in the `context` of child content:
+```razor
+@inject IConvertingService Converter
+
+<h1>@(Converter.Convert<Person, PersonDto>(Person).Name)</h1>
+
+@foreach (var row in Converter.Convert(People, () => new List<PersonRow>()))
+{
+    <p>@row.Name</p>
+}
+```
+The Razor SDK compiles these files with a source generator of its own, and generators do not see each other's output — so the converter generator runs Razor's generator itself, from the SDK building the project, and reads the C# it writes. What it sees is exactly what gets compiled: `_Imports.razor`, code-behind files, components and their parameters, the type of `context`, all of it the way Razor resolves it. Diagnostics are reported at the line in the Razor file. The package's `buildTransitive/Majipro.Converter.targets` tells the generator where Razor's generator is; nothing has to be configured.
+
+Compiling the Razor files a second time is not free, so it is done only in a project that injects the converting service into them: a Razor file says `IConvertingService` (an `@inject`, in the file or in an `_Imports.razor` / `_ViewImports.cshtml`), or a C# property of that type carries Blazor's `[Inject]` (a code-behind file, a base component). A project whose Razor files convert nothing pays nothing.
+
+If Razor's generator can not be found or loaded, the Razor files' conversions are not generated and the build reports the `MC0007` warning; the C# of the project is generated as always.
+
+Not followed:
+- A generic component (`@typeparam TItem`) converting `TItem` is a generic call site nothing calls by name: `<Grid Items="People">` decides the type, and that is markup. It gets the `MC0005` warning below. Converting the items before handing them to the component avoids it.
+- Razor files that reach the converting service only through a service of your own wrapping it (`@inject PersonMapper Mapper` calling a `[RequiresConverter]` method): no Razor file injects `IConvertingService`, so they are not compiled. Injecting it anywhere in the project's Razor files — `_Imports.razor` will do — is enough.
+
 ### What it refuses
 The generator never guesses. When it recognizes a pair but can not write it deterministically, it fails the build with an error instead of generating a Converter that silently loses data:
 
@@ -409,6 +431,7 @@ The generator never guesses. When it recognizes a pair but can not write it dete
 | `MC0004` | Error | The pair itself can not be written, and no Converter for it is implemented in this assembly or in any assembly it references — the `Convert` call would compile and throw at runtime, so it fails the build instead |
 | `MC0005` | Warning | A `Convert` call uses a type parameter and no call deciding that type was found in the compilation (see [Generic call sites](#generic-call-sites)), and the method it is in does not declare the pair with `[RequiresConverter]` (see [Methods that convert](#methods-that-convert)). Nothing is generated for it, and nothing can tell whether a Converter will exist for the pairs it asks for at runtime |
 | `MC0006` | Error | A `[RequiresConverter]` names something that is not a type parameter of the method it is on (see [Methods that convert](#methods-that-convert)) |
+| `MC0007` | Warning | Razor files of the project inject `IConvertingService`, and Razor's source generator could not be run to find the conversions written in them (see [Razor files](#razor-files)). None of them is generated; the message says why |
 | `MC0001` | Error | Anything else that went wrong while generating |
 
 The errors apply to pairs found through a generic call site the same way as to pairs written out, so a generic helper is no way around them.
@@ -488,6 +511,7 @@ builder.Services.AddConverting<MyClass>();
 | `MC0002`, `MC0003`, `MC0004` at build time | The generator refuses the pair, see [What it refuses](#what-it-refuses). Write the Converter yourself, as a class — in this assembly or in one it references |
 | `MC0002`, `MC0003`, `MC0004` naming types no `Convert<,>` call of yours writes out | A generic helper is called with those types, see [Generic call sites](#generic-call-sites). Before the generator followed generic call sites, this conversion compiled and threw at runtime |
 | `MC0005` warning on a `Convert` call | The generator can not see who calls the generic method it is in. If it is called from another assembly, mark it with `[RequiresConverter]` naming the pair it converts — that also silences the warning, see [Methods that convert](#methods-that-convert). Otherwise make sure every type it is called with has a Converter, then turn the warning off or keep it, see [What it refuses](#what-it-refuses) |
+| `MC0007` warning | The package's `buildTransitive/Majipro.Converter.targets` did not run (the generator was added some other way than through the package) or Razor's generator could not be loaded into the compiler, see [Razor files](#razor-files). Conversions written only in Razor files are not generated until it is fixed |
 | The generated Converter is not found at runtime | It is generated into the assembly holding the call site, so that assembly has to be one of the ones you hand to `AddConverting` |
 | A hand written Converter is duplicated by a generated one | The Converter is `internal` to a referenced assembly, so the compilation it is generated into can not see it. Make it public, or move it next to the call site |
 

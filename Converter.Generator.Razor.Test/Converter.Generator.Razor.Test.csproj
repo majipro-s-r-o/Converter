@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <!-- Razor's source generator is not a package: it ships with the SDK and is built against the
+         compiler of the same SDK, which is the only compiler that can run it. So this suite runs on
+         that compiler and that generator - the SDK building it - exactly as a consuming project's
+         build does, and has no floor of its own. Converter.Generator.Test is what drives the
+         generator on the oldest Roslyn it claims to support.
+
+         The compiler is where RoslynTargetsPath says, which the SDK sets per MSBuild: on the CLI (Core
+         MSBuild) it is the SDK's Roslyn folder, which holds the build tasks, with the compiler in its
+         bincore subfolder; in Visual Studio (.NET Framework MSBuild) it is the SDK's Roslyn\binfx,
+         which holds the compiler directly. The Razor SDK is named from NetCoreRoot and NETCoreSdkVersion,
+         the same under both MSBuilds - not from MSBuildSDKsPath, which in Visual Studio is its own
+         MSBuild\Sdks folder, where there is no Razor SDK. With MSBuildSDKsPath the generator list came
+         out empty there, and every test failed in Assembly.LoadFrom("") instead of at build. -->
+    <PropertyGroup>
+        <_SdkDirectory>$([MSBuild]::NormalizeDirectory('$(NetCoreRoot)', 'sdk', '$(NETCoreSdkVersion)'))</_SdkDirectory>
+        <_SdkRoslynDirectory Condition="'$(MSBuildRuntimeType)' == 'Core'">$(RoslynTargetsPath)\bincore\</_SdkRoslynDirectory>
+        <_SdkRoslynDirectory Condition="'$(MSBuildRuntimeType)' != 'Core'">$(RoslynTargetsPath)\</_SdkRoslynDirectory>
+        <_SdkRazorGeneratorDirectory>$(_SdkDirectory)Sdks\Microsoft.NET.Sdk.Razor\source-generators\</_SdkRazorGeneratorDirectory>
+    </PropertyGroup>
+
+    <Target Name="_CheckSdkDirectories" BeforeTargets="ResolveAssemblyReferences">
+        <Error Condition="!Exists('$(_SdkRoslynDirectory)Microsoft.CodeAnalysis.CSharp.dll')"
+               Text="The SDK's compiler was not found at '$(_SdkRoslynDirectory)'. The suite has to run on the compiler of the SDK that ships the Razor generator." />
+        <Error Condition="'@(_SdkRazorGenerator)' == ''"
+               Text="The SDK's Razor source generator was not found at '$(_SdkRazorGeneratorDirectory)'. The suite runs Razor's generator next to the generator under test." />
+    </Target>
+
+    <ItemGroup>
+        <Reference Include="$(_SdkRoslynDirectory)Microsoft.CodeAnalysis.dll" />
+        <Reference Include="$(_SdkRoslynDirectory)Microsoft.CodeAnalysis.CSharp.dll" />
+        <!-- What a Blazor or MVC project compiles against, so the Razor files of the cases compile. -->
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="[18.10.1,)" />
+        <PackageReference Include="MSTest" Version="[4.4.0,)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <_SdkRazorGenerator Include="$(_SdkRazorGeneratorDirectory)*.dll" />
+        <!-- Where the generators are, the way buildTransitive/Majipro.Converter.targets tells the generator in a
+             consuming build. -->
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>RazorGenerator</_Parameter1>
+            <_Parameter2>@(_SdkRazorGenerator->'%(FullPath)', '|')</_Parameter2>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Converter.Generator\Converter.Generator.csproj" />
+        <ProjectReference Include="..\Converter\Converter.csproj" />
+        <ProjectReference Include="..\Converter.Abstrations\Converter.Abstrations.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The harness is Converter.Generator.Test's, compiled here a second time against this
+             compiler rather than referenced: the two suites run on different versions of Roslyn. -->
+        <Compile Include="..\Converter.Generator.Test\ConversionTestBase.cs" Link="Harness\ConversionTestBase.cs" />
+        <Compile Include="..\Converter.Generator.Test\Helpers\*.cs" Link="Harness\Helpers\%(Filename)%(Extension)" />
+        <Compile Include="..\Converter.Generator.Test\Extensions\*.cs" Link="Harness\Extensions\%(Filename)%(Extension)" />
+        <Compile Include="..\Converter.Generator.Test\TestCompositionBase.cs" Link="TestCompositionBase.cs">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- C# files of the cases (compositions, a base component a case is about), Razor files and
+             code behind files are handed to the compilation of a case from the output directory. A code behind file uses what only the Razor side declares
+             (an @inject), so like a real one it does not compile on its own: it is source code for
+             the compilation of the case only. -->
+        <Compile Update="Conversions\**\*.cs">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Compile>
+        <None Update="**\*.razor;**\*.cshtml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <Compile Remove="**\*.razor.cs" />
+        <None Include="**\*.razor.cs">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>

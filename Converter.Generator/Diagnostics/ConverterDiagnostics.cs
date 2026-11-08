@@ -83,4 +83,20 @@ internal static class ConverterDiagnostics
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// Razor files that use the converting service, and no Razor generator to compile them with. The
+    /// conversions written in them are seen only in what Razor's own generator makes of them, which no
+    /// other generator is shown, so the generator runs that one itself - and when it can not, those
+    /// conversions are not generated and would throw at runtime. A warning rather than an error, since
+    /// every one of them may have a converter written by hand, and the C# of the project is generated
+    /// as always.
+    /// </summary>
+    internal static readonly DiagnosticDescriptor RazorNotCompiled = new DiagnosticDescriptor(
+        "MC0007",
+        "Conversions in Razor files are not generated",
+        "Razor files of this project use IConvertingService, and no converter is generated for the conversions written in them: {0}",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 }

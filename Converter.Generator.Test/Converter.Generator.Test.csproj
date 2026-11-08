@@ -29,6 +29,11 @@
       <Compile Update="**\*Composition*.cs">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Compile>
+      <!-- Razor files are what the Razor SDK hands the generator as additional files, the test
+           cases hand them over from the output directory the same way. -->
+      <None Update="**\*.razor;**\*.cshtml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

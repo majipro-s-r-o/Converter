@@ -21,6 +21,7 @@ internal sealed class InvocationsSyntaxReceiver : ISyntaxReceiver
 {
     private readonly List<InvocationExpressionSyntax> _invocations = new List<InvocationExpressionSyntax>();
     private readonly HashSet<string> _attributedLocalFunctions = new HashSet<string>();
+    private readonly List<PropertyDeclarationSyntax> _attributedProperties = new List<PropertyDeclarationSyntax>();
 
     /// <summary>Every invocation in the compilation.</summary>
     public IReadOnlyList<InvocationExpressionSyntax> Invocations => _invocations;
@@ -33,6 +34,14 @@ internal sealed class InvocationsSyntaxReceiver : ISyntaxReceiver
     /// </summary>
     public IReadOnlyCollection<string> AttributedLocalFunctions => _attributedLocalFunctions;
 
+    /// <summary>
+    /// The properties carrying any attribute. A component written in C# - a code behind file, a base
+    /// component - has a service injected by Blazor's <c>[Inject]</c> on a property, and which
+    /// attribute a property carries is not a question of its name either (an alias names it anything),
+    /// so it is decided once the property is bound, by <see cref="Razor.RazorSources"/>.
+    /// </summary>
+    public IReadOnlyList<PropertyDeclarationSyntax> AttributedProperties => _attributedProperties;
+
     public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
     {
         if (syntaxNode is InvocationExpressionSyntax invocation)
@@ -42,6 +51,10 @@ internal sealed class InvocationsSyntaxReceiver : ISyntaxReceiver
         else if (syntaxNode is LocalFunctionStatementSyntax { AttributeLists.Count: > 0 } localFunction)
         {
             _attributedLocalFunctions.Add(localFunction.Identifier.ValueText);
+        }
+        else if (syntaxNode is PropertyDeclarationSyntax { AttributeLists.Count: > 0 } property)
+        {
+            _attributedProperties.Add(property);
         }
     }
 

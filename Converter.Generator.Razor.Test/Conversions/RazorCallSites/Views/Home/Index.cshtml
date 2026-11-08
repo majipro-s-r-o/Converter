@@ -1,0 +1,15 @@
+@model PeopleModel
+@{
+    ViewData["Title"] = "People";
+}
+
+@section Scripts {
+    <script>var count = @Model.People.Count; if (count < 1) { }</script>
+}
+
+<ul>
+    @foreach (var view in Converter.Convert(Model.People, () => new List<ModelView>()))
+    {
+        <li>@view.Name</li>
+    }
+</ul>

@@ -4,6 +4,7 @@ using Majipro.Converter.Generator.Conversions;
 using Majipro.Converter.Generator.Diagnostics;
 using Majipro.Converter.Generator.Extensions;
 using Majipro.Converter.Generator.Generating;
+using Majipro.Converter.Generator.Razor;
 using Majipro.Converter.Generator.Receivers;
 using Majipro.Converter.Generator.Rules;
 using Majipro.Converter.Generator.Sources;
@@ -65,7 +66,28 @@ internal class ConverterGenerator : ISourceGenerator
 
     private static void ExecuteInternal(GeneratorExecutionContext context, InvocationsSyntaxReceiver receiver)
     {
-        var semantics = new ConversionSemantics(context.Compilation);
+        // The call sites written in .razor and .cshtml files are in no tree of the compilation - the
+        // Razor generator's output is invisible to every other generator - so Razor's generator is
+        // run once more, and its C# is bound against a compilation of its own.
+        var razor = RazorSources.Create(context, receiver);
+
+        if (razor.Problem != null)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                ConverterDiagnostics.RazorNotCompiled,
+                Location.None,
+                razor.Problem));
+        }
+
+        foreach (var tree in razor.SyntaxTrees)
+        {
+            foreach (var node in tree.GetRoot(context.CancellationToken).DescendantNodesAndSelf())
+            {
+                receiver.OnVisitSyntaxNode(node);
+            }
+        }
+
+        var semantics = new ConversionSemantics(razor.AddTo(context.Compilation));
 
         if (semantics.IsAvailable == false)
         {
@@ -98,7 +120,7 @@ internal class ConverterGenerator : ISourceGenerator
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 ConverterDiagnostics.UnresolvedGenericConversion,
-                unresolved.CallSite.Node.GetLocation(),
+                razor.Map(unresolved.CallSite.Node.GetLocation()),
                 unresolved.CallSite.Pair.From.ToReadableName(),
                 unresolved.CallSite.Pair.To.ToReadableName(),
                 unresolved.Method?.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat) ??
