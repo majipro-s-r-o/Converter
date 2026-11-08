@@ -370,6 +370,24 @@ internal sealed class ConversionSemantics
     }
 
     /// <summary>
+    /// Two different enums, either of them possibly nullable, the pair <see cref="Rules.EnumValueRule"/>
+    /// writes for a property and <see cref="Rules.CollectionValueRule"/> accepts for the items of a
+    /// collection. Requesting it is what has <see cref="Rules.EnumBodyRule"/> write the converter in
+    /// the same pass - or refuse the pair on <c>MC0002</c> when the members do not line up, which is
+    /// the answer that says why, where a property nothing claims would only say that it is unfilled.
+    /// </summary>
+    public bool IsEnumConversion(ITypeSymbol from, ITypeSymbol to)
+    {
+        var source = from.GetUnderlyingType();
+        var target = to.GetUnderlyingType();
+
+        return source.TypeKind == TypeKind.Enum &&
+               target.TypeKind == TypeKind.Enum &&
+               source.IsVisibleToGeneratedCode() &&
+               target.IsVisibleToGeneratedCode();
+    }
+
+    /// <summary>
     /// A scalar and its text form, the pair <see cref="Rules.StringValueRule"/> writes for a
     /// property and <see cref="Rules.CollectionValueRule"/> accepts for the items of a collection.
     /// Whoever asks this is about to hand the value to the converting service, so the question it

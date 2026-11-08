@@ -349,7 +349,7 @@ Generation is recursive: a property whose type is itself a mappable pair is conv
 | Collections | `List<Address>` to `List<AddressDto>` | Source is any `IEnumerable<T>`, target is `IEnumerable<>`, `ICollection<>`, `IList<>`, `IReadOnlyCollection<>`, `IReadOnlyList<>` or `List<>` |
 | Scalar to its text | `int` to `string`, `DateTime` to `string` | Written as `System.Convert.ToString` |
 | Text to a scalar | `string` to `int` | Only for the build in Converters listed above, so `FormatProvider` and the other options apply |
-| Enum to enum | `EntityState` to `DomainState` | Matched by member **name**, so the two sides may number their members differently |
+| Enum to enum | `EntityState` to `DomainState` | Matched by member **name**, so the two sides may number their members differently. Works at a call site, as a property (nullable on either side included) and as the items of a collection |
 | Enum to `string` | `EntityState` to `string` | |
 | `Nullable<T>` on either side | `int?` to `string` | Unwrapped, the Converter still takes and returns the nullable type |
 

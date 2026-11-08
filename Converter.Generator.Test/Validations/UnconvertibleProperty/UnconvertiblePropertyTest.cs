@@ -5,10 +5,9 @@ namespace Majipro.Converter.Generator.Test.Validations.UnconvertibleProperty;
 
 /// <summary>
 /// The other half of MC0003: the target property has a source property of the same name, and no
-/// value rule claims the pair. Two different enum types are the shape that reaches this today -
-/// <c>EnumBodyRule</c> would know what to do with them, but a value rule has to hand them to it
-/// first and none does. Until one does, the honest answer is the same as for a property that is
-/// not there at all.
+/// value rule claims the pair. <c>double -&gt; float</c> is the shape that reaches this today - the
+/// compiler does not narrow by itself and nothing answers the pair - and the honest answer is the
+/// same as for a property that is not there at all.
 /// </summary>
 [TestClass]
 public class UnconvertiblePropertyTest : ConversionTestBase<UnconvertiblePropertyComposition>
@@ -33,7 +32,7 @@ public class UnconvertiblePropertyTest : ConversionTestBase<UnconvertiblePropert
         var message = Diagnostic.Single().GetMessage();
 
         Assert.IsTrue(
-            message.EndsWith(": " + nameof(UnconvertiblePropertyTestCase.To.Status)),
+            message.EndsWith(": " + nameof(UnconvertiblePropertyTestCase.To.Amount)),
             "The listed properties are expected to be exactly the ones nothing fills, but were: " + message);
     }
 

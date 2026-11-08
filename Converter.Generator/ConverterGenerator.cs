@@ -146,6 +146,7 @@ internal class ConverterGenerator : ISourceGenerator
         {
             new DirectValueRule(),
             new ConvertedValueRule(),
+            new EnumValueRule(),
             new CollectionValueRule(),
             new StringValueRule()
         };
