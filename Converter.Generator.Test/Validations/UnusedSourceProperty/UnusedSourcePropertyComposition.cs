@@ -5,8 +5,8 @@ namespace Majipro.Converter.Generator.Test.Validations.UnusedSourceProperty;
 
 /// <summary>
 /// A conversion the generator refuses: the source carries a <c>BB</c> nobody asked for and the
-/// target wants a <c>B</c> nothing fills. It is a compilation of its own, because the error ends
-/// the whole generation pass.
+/// target wants a <c>B</c> nothing fills. It is a compilation of its own, so the error it
+/// is about is the only one reported.
 /// </summary>
 public class UnusedSourcePropertyComposition : TestCompositionBase
 {

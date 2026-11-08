@@ -5,7 +5,7 @@ namespace Majipro.Converter.Generator.Test.Validations.RenamedProperty;
 
 /// <summary>
 /// A conversion the generator refuses: the source carries a <c>B</c> and the target wants a
-/// <c>BB</c>. It is a compilation of its own, because the error ends the whole generation pass.
+/// <c>BB</c>. It is a compilation of its own, so the error it is about is the only one reported.
 /// </summary>
 public class RenamedPropertyComposition : TestCompositionBase
 {

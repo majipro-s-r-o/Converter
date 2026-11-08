@@ -6,7 +6,7 @@ namespace Majipro.Converter.Generator.Test.Validations.DisjointEnumMembers;
 /// <summary>
 /// Neither enum covers the other, so the conversion is refused for the same reason as in
 /// <c>Validations\MissingEnumMember</c> - <c>Left.Closed</c> has nowhere to go. It is a
-/// compilation of its own, because the error ends the whole generation pass.
+/// compilation of its own, so the error it is about is the only one reported.
 /// </summary>
 public class DisjointEnumMembersComposition : TestCompositionBase
 {

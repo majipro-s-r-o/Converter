@@ -5,8 +5,8 @@ namespace Majipro.Converter.Generator.Test.Validations.NullableScalarProperty;
 
 /// <summary>
 /// A conversion the generator refuses: <c>To.Count</c> is an <c>int?</c> and the library has a
-/// built-in converter for <c>string -&gt; int</c> only. It is a compilation of its own, because the
-/// error ends the whole generation pass.
+/// built-in converter for <c>string -&gt; int</c> only. It is a compilation of its own, so the error
+/// it is about is the only one reported.
 /// </summary>
 public class NullableScalarPropertyComposition : TestCompositionBase
 {

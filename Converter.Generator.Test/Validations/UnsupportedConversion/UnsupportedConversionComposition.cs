@@ -6,8 +6,7 @@ namespace Majipro.Converter.Generator.Test.Validations.UnsupportedConversion;
 /// <summary>
 /// A conversion the generator refuses: two numbers. No rule knows how to write the pair, the
 /// library has no built-in converter for it, and nobody wrote one - so the call would compile and
-/// throw at runtime. It is a compilation of its own, because the error ends the whole generation
-/// pass.
+/// throw at runtime. It is a compilation of its own, so the error it is about is the only one reported.
 /// </summary>
 /// <remarks>
 /// The pair has to be one no converter in this test assembly implements: the compilation references

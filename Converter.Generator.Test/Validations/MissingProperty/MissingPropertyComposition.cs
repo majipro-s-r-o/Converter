@@ -5,7 +5,7 @@ namespace Majipro.Converter.Generator.Test.Validations.MissingProperty;
 
 /// <summary>
 /// A conversion the generator refuses: <c>To.B</c> has no counterpart in <c>From</c>. It is a
-/// compilation of its own, because the error ends the whole generation pass.
+/// compilation of its own, so the error it is about is the only one reported.
 /// </summary>
 public class MissingPropertyComposition : TestCompositionBase
 {

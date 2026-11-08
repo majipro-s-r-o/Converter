@@ -22,8 +22,8 @@ namespace Majipro.Converter.Generator.Test;
 /// test resolves it and converts. <c>Validations\</c> holds the cases it is expected to refuse, and
 /// the test asserts on <see cref="Diagnostic"/> and on <see cref="GeneratedSources"/> being empty -
 /// it never touches <see cref="ServiceProvider"/>, because the compilation it describes is meant to
-/// fail. A refusal ends the whole generation pass, so each one needs a compilation of its own,
-/// which is why a validation case is a folder of its own rather than another composition next to a
+/// fail. Each refusal gets a compilation of its own, so the diagnostic asserted on is the
+/// only one reported, which is why a validation case is a folder of its own rather than another composition next to a
 /// conversion.
 ///
 /// Either way a test case consists of three files:
