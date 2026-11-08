@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Receivers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;

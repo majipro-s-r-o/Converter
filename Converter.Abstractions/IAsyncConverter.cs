@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-namespace Majipro.Converter.Abstrations;
+namespace Majipro.Converter.Abstractions;
 
 /// <summary>
 /// Asynchronous converter between <see cref="TFrom"/> and <see cref="TTo"/>.

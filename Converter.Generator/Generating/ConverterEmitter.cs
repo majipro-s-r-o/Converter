@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Conversions;
 using Majipro.Converter.Generator.Diagnostics;
 using Majipro.Converter.Generator.Extensions;

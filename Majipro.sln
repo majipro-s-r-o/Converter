@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Generator.Test", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Generator", "Converter.Generator\Converter.Generator.csproj", "{56BC9F6F-DC1A-4DC5-85A9-F7DE5518531D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Abstrations", "Converter.Abstrations\Converter.Abstrations.csproj", "{EFEE297A-4E12-404E-9AD9-54A645A6A59C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Abstractions", "Converter.Abstractions\Converter.Abstractions.csproj", "{EFEE297A-4E12-404E-9AD9-54A645A6A59C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter.Generator.Razor.Test", "Converter.Generator.Razor.Test\Converter.Generator.Razor.Test.csproj", "{2BC353ED-A9B7-4119-9A01-C489A0726D50}"
 EndProject

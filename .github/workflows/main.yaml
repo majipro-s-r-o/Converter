@@ -47,7 +47,7 @@ jobs:
 
             -   name: Pack
                 # One package: Majipro.Converter, carrying the runtime in lib/ and the generator in
-                # analyzers/dotnet/cs. Converter.Abstrations and Converter.Generator are not
+                # analyzers/dotnet/cs. Converter.Abstractions and Converter.Generator are not
                 # packable, so this produces exactly one file.
                 run: dotnet pack --no-build --configuration Release /p:Version="$VERSION" --output artifacts
 

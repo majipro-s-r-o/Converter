@@ -1,6 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 
 namespace Majipro.Converter.Tests.Mocks;
 

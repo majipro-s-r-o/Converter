@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Majipro.Converter.Generator.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -71,14 +71,14 @@ internal sealed class ConversionSemantics
     /// referenced assembly that references the abstractions. <c>DiCompositor.AddConverting</c>
     /// finds converters by reflecting over the assemblies it is handed, so a converter in a class
     /// library is as real as one written next to the call site - the generator has to ask the same
-    /// question. An assembly that does not reference <c>Majipro.Converter.Abstrations</c> can not
+    /// question. An assembly that does not reference <c>Majipro.Converter.Abstractions</c> can not
     /// implement a converter interface, which keeps this to the one or two assemblies that do
     /// instead of the whole framework.
     /// </summary>
     public IReadOnlyList<IAssemblySymbol> ConverterAssemblies { get; }
 
     /// <summary>
-    /// Majipro.Converter.Abstrations is referenced, so there is something to generate at all.
+    /// Majipro.Converter.Abstractions is referenced, so there is something to generate at all.
     /// </summary>
     public bool IsAvailable => ConvertingService != null && ConverterInterface != null && RequiresConverterAttribute != null;
 
@@ -158,10 +158,10 @@ internal sealed class ConversionSemantics
                 continue;
             }
 
-            var referencesAbstrations = referenced.Modules.Any(m => m.ReferencedAssemblySymbols.Any(
+            var referencesAbstractions = referenced.Modules.Any(m => m.ReferencedAssemblySymbols.Any(
                 r => SymbolEqualityComparer.Default.Equals(r, abstractions)));
 
-            if (referencesAbstrations)
+            if (referencesAbstractions)
             {
                 assemblies.Add(referenced);
             }

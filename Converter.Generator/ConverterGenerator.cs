@@ -91,7 +91,7 @@ internal class ConverterGenerator : ISourceGenerator
 
         if (semantics.IsAvailable == false)
         {
-            // Majipro.Converter.Abstrations is not referenced, there is nothing to generate.
+            // Majipro.Converter.Abstractions is not referenced, there is nothing to generate.
             return;
         }
 

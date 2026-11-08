@@ -36,7 +36,7 @@ public class InferredCallSitesTest : ConversionTestBase<InferredCallSitesComposi
         AssertGeneratedWithoutDiagnostics();
 
         var converter = ServiceProvider.GetService(
-            typeof(Majipro.Converter.Abstrations.IConverter<,>).MakeGenericType(from, to));
+            typeof(Majipro.Converter.Abstractions.IConverter<,>).MakeGenericType(from, to));
 
         Assert.IsNotNull(converter, $"No converter for {from.Name} -> {to.Name}.");
     }

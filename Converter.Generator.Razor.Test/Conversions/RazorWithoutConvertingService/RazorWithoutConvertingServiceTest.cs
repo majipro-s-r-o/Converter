@@ -1,4 +1,4 @@
-using Majipro.Converter.Abstrations;
+using Majipro.Converter.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using static Majipro.Converter.Generator.Razor.Test.Conversions.RazorWithoutConvertingService.RazorWithoutConvertingServiceTestCase;
 
