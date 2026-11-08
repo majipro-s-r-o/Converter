@@ -1,0 +1,30 @@
+<Project>
+
+  <!-- Conversions written in .razor and .cshtml files are seen only in the C# Razor's own source
+       generator makes of them, and no generator is shown another one's output. So the converter
+       generator runs Razor's generator itself, and this tells it where that one is: the assemblies
+       the Razor SDK hands the compiler as analyzers, which live in its source-generators folder.
+
+       The paths are separated by '|', which no Windows path contains: the property reaches the
+       generator through an .editorconfig file, where ';' starts a comment.
+
+       Only when the SDK compiles Razor files with its generator at all. With
+       UseRazorSourceGenerator=false the Razor files are compiled into .g.cs files before the
+       compiler runs, which the converter generator sees like any other C#. -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="MajiproConverterRazorGenerator" />
+  </ItemGroup>
+
+  <Target Name="_MajiproConverterRazorGenerator"
+          BeforeTargets="GenerateMSBuildEditorConfigFileShouldRun"
+          Condition="'$(UseRazorSourceGenerator)' == 'true' AND '$(RazorSdkDirectoryRoot)' != ''">
+    <ItemGroup>
+      <_MajiproConverterRazorGenerator Include="$(RazorSdkDirectoryRoot)\source-generators\*.dll" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <MajiproConverterRazorGenerator>@(_MajiproConverterRazorGenerator->'%(FullPath)', '|')</MajiproConverterRazorGenerator>
+    </PropertyGroup>
+  </Target>
+
+</Project>

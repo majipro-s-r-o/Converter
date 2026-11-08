@@ -1,0 +1,9 @@
+<div title="@Title">@Value.Name</div>
+
+@code {
+    [Parameter]
+    public AttributeView Value { get; set; }
+
+    [Parameter]
+    public string Title { get; set; }
+}

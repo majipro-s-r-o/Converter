@@ -57,6 +57,14 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- Tells the generator where Razor's source generator is, see the file. buildTransitive/ is
+             what NuGet imports for a direct reference as well as for a project referencing this
+             package through another one - which the analyzer reaches too, and needs it there just
+             the same. -->
+        <None Include="Targets\Majipro.Converter.targets" Pack="true" PackagePath="buildTransitive\Majipro.Converter.targets" />
+    </ItemGroup>
+
     <!-- lib/: the runtime half. Majipro.Converter.dll is the build output and arrives by itself,
          Majipro.Converter.Abstrations.dll is a project reference and would otherwise be left out,
          because a reference to a project that is not packable produces neither a dependency nor a
