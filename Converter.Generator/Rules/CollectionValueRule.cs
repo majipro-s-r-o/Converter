@@ -40,9 +40,9 @@ internal sealed class CollectionValueRule : IPropertyValueRule
     /// <summary>
     /// Whether the converting service is going to have a converter for the items, which is the only
     /// thing that separates a collection this rule can write from one it can not. The three ways
-    /// there can be one are the three value rules asked of an ordinary property, minus the one the
-    /// compiler would have performed itself: the items are the same type, they are a scalar and its
-    /// text, or they are a pair a converter is generated for.
+    /// there can be one are the value rules asked of an ordinary property, minus the one the compiler
+    /// would have performed itself: the items are the same type, they are a scalar and its text, they
+    /// are two enums, or they are a pair a converter is generated for.
     /// </summary>
     /// <remarks>
     /// Being merely assignable, the way <c>int</c> is to <c>long</c>, is deliberately not one of
@@ -56,7 +56,8 @@ internal sealed class CollectionValueRule : IPropertyValueRule
             return true;
         }
 
-        if (context.Semantics.IsTextConversion(sourceItem, targetItem))
+        if (context.Semantics.IsTextConversion(sourceItem, targetItem) ||
+            context.Semantics.IsEnumConversion(sourceItem, targetItem))
         {
             return true;
         }
